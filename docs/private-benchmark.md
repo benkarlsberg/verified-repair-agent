@@ -85,7 +85,7 @@ Manifest paths are relative and must not contain `..`. A path that exists in the
 <sha256 of file bytes><two spaces><relative path>
 ```
 
-Symlinks, `__pycache__`, and `.pyc` files are skipped. The lines are joined with newlines, a trailing newline is added, and the SHA-256 of that byte string is the fixture hash.
+Symlinks are skipped, as are VCS metadata (`.git`, `.hg`, `.svn`), virtual environments (`.venv`, `venv`), caches (including `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`), packaging leftovers (`dist`, `build`, `*.egg-info`), and bytecode (`.pyc`, `.pyo`). Those names are matched on the path relative to the hashed root. The fixture tree does not contain them, so the recorded fixture hash does not move when the skip list grows. The lines are joined with newlines, a trailing newline is added, and the SHA-256 of that byte string is the fixture hash.
 
 ## Patches
 

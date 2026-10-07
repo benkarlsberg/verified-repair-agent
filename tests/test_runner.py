@@ -13,7 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from repair_agent.runner import Runner, RunnerError, docker_available, isolation_args
+from repair_agent.runner import (
+    Runner,
+    RunnerError,
+    docker_available,
+    image_build_command,
+    isolation_args,
+)
 
 pytestmark_docker = pytest.mark.skipif(not docker_available(), reason="Docker is not available")
 
@@ -52,6 +58,37 @@ def test_isolation_args_match_the_runner_contract(tmp_path: Path) -> None:
     assert "/protected" not in joined
     for flag in ("--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges"):
         assert flag in command
+
+
+def test_image_build_prefers_buildx_and_falls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text("FROM scratch\n")
+    buildx = image_build_command("img:test", dockerfile, use_buildx=True)
+    legacy = image_build_command("img:test", dockerfile, use_buildx=False)
+    assert buildx[:4] == ["docker", "buildx", "build", "--load"]
+    assert "-t" in buildx and "img:test" in buildx
+    assert legacy[:2] == ["docker", "build"]
+    assert "buildx" not in legacy
+
+    calls: list[list[str]] = []
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        calls.append(list(argv))
+        if argv[:3] == ["docker", "image", "inspect"]:
+            return subprocess.CompletedProcess(argv, 1)
+        failed = argv[1:3] == ["buildx", "build"]
+        return subprocess.CompletedProcess(argv, 1 if failed else 0)
+
+    monkeypatch.setattr("repair_agent.runner.subprocess.run", fake_run)
+    monkeypatch.setattr("repair_agent.runner.buildx_available", lambda: False)
+    Runner(image="img:test", dockerfile=dockerfile).ensure_image()
+    assert calls[-1] == legacy
+
+    calls.clear()
+    monkeypatch.setattr("repair_agent.runner.buildx_available", lambda: True)
+    with pytest.raises(RunnerError, match="failed to build"):
+        Runner(image="img:test", dockerfile=dockerfile).ensure_image()
+    assert [call for call in calls if call[1] != "image"] == [buildx]
 
 
 def test_pytest_target_traversal_is_rejected(tmp_path: Path) -> None:

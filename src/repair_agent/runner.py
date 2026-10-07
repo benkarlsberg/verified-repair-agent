@@ -210,10 +210,10 @@ class Runner:
         )
         if inspect.returncode != 0:
             dockerfile = self.dockerfile or _default_dockerfile()
-            build = subprocess.run(
-                ["docker", "build", "-t", self.image, "-f", str(dockerfile), str(dockerfile.parent)],
-                check=False,
-            )
+            # A failed BuildKit build is reported. The legacy builder is only
+            # used when the buildx plugin is not installed.
+            command = image_build_command(self.image, dockerfile, use_buildx=buildx_available())
+            build = subprocess.run(command, check=False)
             if build.returncode != 0:
                 raise RunnerError(f"failed to build {self.image} from {dockerfile}")
         self._image_ready = True
@@ -248,6 +248,36 @@ def remove_container(name: str) -> None:
         check=False,
         timeout=30,
     )
+
+
+def image_build_command(image: str, dockerfile: Path, *, use_buildx: bool) -> list[str]:
+    """Argv that builds the runner image into the local Docker image store.
+
+    ``docker buildx build --load`` is the supported BuildKit path. Docker 29
+    warns that the legacy ``docker build`` builder will be removed. That
+    command remains the fallback when buildx is not installed, because
+    ``--load`` is what puts the image where ``docker run`` can see it.
+    """
+    context = str(dockerfile.parent)
+    dockerfile_arg = str(dockerfile)
+    if use_buildx:
+        return ["docker", "buildx", "build", "--load", "-t", image, "-f", dockerfile_arg, context]
+    return ["docker", "build", "-t", image, "-f", dockerfile_arg, context]
+
+
+def buildx_available() -> bool:
+    """True when the Docker CLI has a working buildx plugin."""
+    try:
+        completed = subprocess.run(
+            ["docker", "buildx", "version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
 
 
 def docker_available() -> bool:

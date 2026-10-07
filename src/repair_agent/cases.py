@@ -33,6 +33,32 @@ HELD_OUT_MANIFEST = "manifests/heldout.json"
 PROBE_SCORING = "evaluator_private/probe_scoring.json"
 FIXTURE_DIR = "benchmark/fixture"
 
+# Not benchmark or config content. Matched on the path relative to the hashed
+# root, so a checkout that itself lives under ``.venv`` or ``.git`` is still hashed.
+_SKIPPED_DIR_NAMES = frozenset(
+    {
+        ".git",
+        ".hg",
+        ".svn",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".nox",
+        "htmlcov",
+        ".eggs",
+        "node_modules",
+        ".cache",
+        "dist",
+        "build",
+    }
+)
+_SKIPPED_FILE_NAMES = frozenset({".coverage", ".DS_Store", ".git"})
+_SKIPPED_SUFFIXES = frozenset({".pyc", ".pyo"})
+
 
 @dataclass
 class PrivateDir:
@@ -75,21 +101,39 @@ def fixture_root() -> Path:
 
 
 def tree_sha256(root: Path) -> str:
-    """Hash a directory of regular files.
+    """Hash a directory of benchmark and config files.
 
     The digest is SHA-256 over UTF-8 lines ``"<file sha256>  <relative posix path>"``,
-    sorted by path, joined with newlines and a trailing newline. Symlinks,
-    ``__pycache__``, and ``.pyc`` files are omitted.
+    sorted by path, joined with newlines and a trailing newline. Symlinks and
+    anything :func:`_is_content_file` rejects are omitted. The fixture tree has
+    none of those extra paths, so this digest stays put until the fixture changes.
     """
     lines: list[str] = []
-    for path in sorted(root.rglob("*")):
-        if path.is_symlink() or not path.is_file():
-            continue
-        if "__pycache__" in path.parts or path.suffix == ".pyc":
-            continue
+    for path in _content_files(root):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         lines.append(f"{digest}  {path.relative_to(root).as_posix()}")
     return hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest()
+
+
+def _content_files(root: Path) -> list[Path]:
+    return [path for path in sorted(root.rglob("*")) if _is_content_file(root, path)]
+
+
+def _is_content_file(root: Path, path: Path) -> bool:
+    """True for a regular file that is benchmark or config content under ``root``."""
+    if path.is_symlink() or not path.is_file():
+        return False
+    relative = path.relative_to(root)
+    if any(_is_skipped_dir(part) for part in relative.parts[:-1]):
+        return False
+    name = relative.name
+    if name in _SKIPPED_FILE_NAMES or Path(name).suffix in _SKIPPED_SUFFIXES:
+        return False
+    return not name.endswith(".egg-info")
+
+
+def _is_skipped_dir(name: str) -> bool:
+    return name in _SKIPPED_DIR_NAMES or name.endswith(".egg-info")
 
 
 def file_sha256(path: Path) -> str:
@@ -175,11 +219,7 @@ def write_freeze(output: Path) -> dict[str, object]:
     }
     private_files: dict[str, str] = {}
     if private.present:
-        for path in sorted(private.configured.rglob("*")):
-            if path.is_symlink() or not path.is_file():
-                continue
-            if "__pycache__" in path.parts or path.suffix == ".pyc":
-                continue
+        for path in _content_files(private.configured):
             private_files[path.relative_to(private.configured).as_posix()] = file_sha256(path)
         heldout = private.configured / HELD_OUT_MANIFEST
         if heldout.is_file():
@@ -198,6 +238,7 @@ def write_freeze(output: Path) -> dict[str, object]:
         "notes": [
             "fixture sha256 covers benchmark/fixture, including visible tests.",
             "Held-out cases and D01–D08 protected tests are hashed only when the private directory is present.",
+            "Private hashes omit VCS metadata, virtual environments, and caches.",
             "Week 1 does not call a model. Controller and prompt hashes are frozen in week 3.",
         ],
     }

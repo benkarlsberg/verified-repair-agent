@@ -54,7 +54,7 @@ P01–P03 are abstention probes. Their issue texts are public. The expected allo
 
 The patch policy allowlists the case's source paths and new files matching `agent_tests/test_*.py`. It rejects traversal, binaries, deletes, renames, permission changes, and symlinks, and it rejects edits to existing tests, dependency files, and pytest configuration. Diffs are limited to 200 changed lines and 5 files. `git apply --check` runs in a disposable copy. The policy does not import the service.
 
-`repair-agent freeze` writes hashes of the fixture, the public manifests, `config/defaults.json`, and, when the private directory is present, every file in that checkout.
+`repair-agent freeze` writes hashes of the fixture, the public manifests, `config/defaults.json`, and, when the private directory is present, the benchmark and config files in that checkout. A relative `--output` path is written from the current working directory. VCS metadata, virtual environments, and caches are left out, so committing the freeze does not invalidate the private-dir hashes.
 
 ## Honest limitations
 

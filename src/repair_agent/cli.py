@@ -65,14 +65,13 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _output_path(raw: str):
+    """Resolve ``--output``. Relative paths use the caller's working directory."""
     from pathlib import Path
 
     path = Path(raw)
-    if not path.is_absolute():
-        from repair_agent.cases import repo_root
-
-        path = repo_root() / path
-    return path
+    if path.is_absolute():
+        return path
+    return Path.cwd() / path
 
 
 if __name__ == "__main__":
