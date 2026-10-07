@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "split": "dev",
+  "cases": [
+    {
+      "case_id": "D01",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D01/bug.patch",
+      "issue_path": "benchmark/cases/D01/issue.md",
+      "allowed_paths": [
+        "order_service/pricing.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D01",
+      "reference_fix": "evaluator_private/reference_fixes/D01.patch"
+    },
+    {
+      "case_id": "D02",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D02/bug.patch",
+      "issue_path": "benchmark/cases/D02/issue.md",
+      "allowed_paths": [
+        "order_service/validation.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D02",
+      "reference_fix": "evaluator_private/reference_fixes/D02.patch"
+    },
+    {
+      "case_id": "D03",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D03/bug.patch",
+      "issue_path": "benchmark/cases/D03/issue.md",
+      "allowed_paths": [
+        "order_service/pricing.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D03",
+      "reference_fix": "evaluator_private/reference_fixes/D03.patch"
+    },
+    {
+      "case_id": "D04",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D04/bug.patch",
+      "issue_path": "benchmark/cases/D04/issue.md",
+      "allowed_paths": [
+        "order_service/orders.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D04",
+      "reference_fix": "evaluator_private/reference_fixes/D04.patch"
+    },
+    {
+      "case_id": "D05",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D05/bug.patch",
+      "issue_path": "benchmark/cases/D05/issue.md",
+      "allowed_paths": [
+        "order_service/pricing.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D05",
+      "reference_fix": "evaluator_private/reference_fixes/D05.patch"
+    },
+    {
+      "case_id": "D06",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D06/bug.patch",
+      "issue_path": "benchmark/cases/D06/issue.md",
+      "allowed_paths": [
+        "order_service/inventory.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D06",
+      "reference_fix": "evaluator_private/reference_fixes/D06.patch"
+    },
+    {
+      "case_id": "D07",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D07/bug.patch",
+      "issue_path": "benchmark/cases/D07/issue.md",
+      "allowed_paths": [
+        "order_service/pagination.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D07",
+      "reference_fix": "evaluator_private/reference_fixes/D07.patch"
+    },
+    {
+      "case_id": "D08",
+      "split": "dev",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "benchmark/cases/D08/bug.patch",
+      "issue_path": "benchmark/cases/D08/issue.md",
+      "allowed_paths": [
+        "order_service/serialization.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "evaluator_private/tests/D08",
+      "reference_fix": "evaluator_private/reference_fixes/D08.patch"
+    }
+  ]
+}

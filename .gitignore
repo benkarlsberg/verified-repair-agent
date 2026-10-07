@@ -1,0 +1,15 @@
+.env
+.venv/
+private/
+runs/
+workspaces/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+freeze.json
+dist/
+*.egg-info/
+.coverage
+htmlcov/

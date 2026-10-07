@@ -1,0 +1,11 @@
+diff --git a/order_service/inventory.py b/order_service/inventory.py
+--- a/order_service/inventory.py
++++ b/order_service/inventory.py
+@@ -15,7 +15,6 @@
+     needed = _aggregate(items)
+     for product_id, quantity in needed.items():
+         _require_available(stock, product_id, quantity)
+-    for product_id, quantity in needed.items():
+         stock[product_id] -= quantity
+ 
+ 

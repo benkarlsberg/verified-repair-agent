@@ -1,0 +1,12 @@
+diff --git a/order_service/pricing.py b/order_service/pricing.py
+--- a/order_service/pricing.py
++++ b/order_service/pricing.py
+@@ -36,7 +36,7 @@
+     if supplied > gross:
+         raise ValidationError("discount must not exceed subtotal")
+     net = gross - supplied
+-    if net >= FREE_SHIPPING_NET_CENTS:
++    if gross >= FREE_SHIPPING_NET_CENTS:
+         return 0
+     return SHIPPING_FEE_CENTS
+ 

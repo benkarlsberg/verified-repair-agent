@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "split": "probe",
+  "cases": [
+    {
+      "case_id": "P01",
+      "split": "probe",
+      "kind": "probe",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "issue_path": "benchmark/probes/P01/issue.md",
+      "allowed_paths": [
+        "order_service/validation.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ]
+    },
+    {
+      "case_id": "P02",
+      "split": "probe",
+      "kind": "probe",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "issue_path": "benchmark/probes/P02/issue.md",
+      "allowed_paths": [
+        "order_service/pricing.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ]
+    },
+    {
+      "case_id": "P03",
+      "split": "probe",
+      "kind": "probe",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "issue_path": "benchmark/probes/P03/issue.md",
+      "allowed_paths": [
+        "order_service/orders.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ]
+    }
+  ]
+}
