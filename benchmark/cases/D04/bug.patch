@@ -1,0 +1,11 @@
+diff --git a/order_service/orders.py b/order_service/orders.py
+--- a/order_service/orders.py
++++ b/order_service/orders.py
+@@ -118,7 +118,6 @@
+     if existing is not None:
+         if existing.canonical != canonical:
+             raise ConflictError("idempotency key reused with a different payload")
+-        return store.orders[existing.order_id]
+ 
+     lines = []
+     priced: list[dict[str, int]] = []

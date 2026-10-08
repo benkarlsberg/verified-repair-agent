@@ -1,0 +1,10 @@
+diff --git a/order_service/pagination.py b/order_service/pagination.py
+--- a/order_service/pagination.py
++++ b/order_service/pagination.py
+@@ -17,5 +17,5 @@
+         raise ValidationError("page must be an integer >= 1")
+     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:
+         raise ValidationError("size must be an integer from 1 through 100")
+-    offset = (page - 1) * size
++    offset = (page - 1) * size + 1
+     return list(items[offset : offset + size]), len(items)

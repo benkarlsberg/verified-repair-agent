@@ -1,0 +1,12 @@
+diff --git a/order_service/pricing.py b/order_service/pricing.py
+--- a/order_service/pricing.py
++++ b/order_service/pricing.py
+@@ -51,7 +51,7 @@
+             raise ValidationError("each item must include unit_price_cents and quantity")
+         price = validate_cents(item.get("unit_price_cents"), name="unit_price_cents")
+         quantity = validate_quantity(item.get("quantity"))
+-        total += price * quantity
++        total += price
+     return total
+ 
+ 

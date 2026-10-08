@@ -1,0 +1,12 @@
+diff --git a/order_service/pricing.py b/order_service/pricing.py
+--- a/order_service/pricing.py
++++ b/order_service/pricing.py
+@@ -20,7 +20,7 @@
+ def discount_cents(subtotal: object) -> int:
+     """Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents."""
+     amount = validate_cents(subtotal, name="subtotal")
+-    if amount >= DISCOUNT_THRESHOLD_CENTS:
++    if amount > DISCOUNT_THRESHOLD_CENTS:
+         return amount // 10
+     return 0
+ 

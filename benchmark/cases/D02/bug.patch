@@ -1,0 +1,12 @@
+diff --git a/order_service/validation.py b/order_service/validation.py
+--- a/order_service/validation.py
++++ b/order_service/validation.py
+@@ -12,7 +12,7 @@
+     """Accept an integer from 1 through 100. Booleans are rejected."""
+     if isinstance(value, bool) or not isinstance(value, int):
+         raise ValidationError("quantity must be an integer")
+-    if not MIN_QUANTITY <= value <= MAX_QUANTITY:
++    if not 0 <= value <= MAX_QUANTITY:
+         raise ValidationError("quantity must be from 1 through 100")
+     return value
+ 
