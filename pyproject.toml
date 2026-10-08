@@ -1,0 +1,40 @@
+[project]
+name = "verified-repair-agent"
+version = "0.1.0"
+description = "Local repair agent for a small Python order service, with an independent evaluator."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+authors = [{ name = "Ben Karlsberg" }]
+dependencies = [
+    "fastapi>=0.115.6,<0.116",
+    "httpx>=0.28.1,<0.29",
+    "jinja2>=3.1.5,<4",
+    "pydantic>=2.10.4,<3",
+    "uvicorn>=0.34.0,<0.35",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4,<9",
+]
+
+[project.scripts]
+repair-agent = "repair_agent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repair_agent"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "benchmark/fixture"]
+addopts = "-q"
+filterwarnings = [
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
