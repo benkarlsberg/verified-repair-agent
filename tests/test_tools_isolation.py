@@ -99,6 +99,26 @@ def test_agent_test_can_be_added_and_then_source_can_change(tmp_path: Path) -> N
     assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 2\n"
 
 
+def test_wrong_hunk_count_applies_and_begin_patch_is_rejected(tmp_path: Path) -> None:
+    surface = _surface(tmp_path)
+    surface.source_edits_allowed = True
+    patch = unified_diff("order_service/pricing.py", "value = 1\n", "value = 2\n")
+    lines = ["@@ -1,40 +1,40 @@" if line.startswith("@@") else line for line in patch.splitlines()]
+    bad = "\n".join(lines) + "\n"
+    applied = surface.dispatch("apply_patch", {"patch": bad})
+    assert applied.ok is True
+    assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 2\n"
+    begin = surface.dispatch(
+        "apply_patch",
+        {"patch": "*** Begin Patch\n*** Update File: order_service/pricing.py\n*** End Patch\n"},
+    )
+    assert begin.ok is False
+    assert "format" in begin.model_text
+    assert "diff --git" in begin.model_text
+    assert "Begin Patch" in begin.model_text
+    assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 2\n"
+
+
 def test_fourth_source_patch_stops_the_budget(tmp_path: Path) -> None:
     surface = _surface(tmp_path)
     surface.source_edits_allowed = True

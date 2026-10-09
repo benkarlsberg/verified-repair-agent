@@ -1,9 +1,11 @@
 """Validate a unified diff before it is applied.
 
 The checks are a curated task policy: allowlisted source, new files only under
-``agent_tests/test_*.py``, size limits, and a ``git apply --check`` against a
-disposable copy of the workspace. They are not a detector for hostile code.
-Nothing here imports or executes the fixture.
+``agent_tests/test_*.py``, size limits, and a ``git apply --check --recount``
+against a disposable copy of the workspace. ``--recount`` tolerates a wrong
+hunk line count. It does not accept any format other than a git unified diff.
+They are not a detector for hostile code. Nothing here imports or executes
+the fixture.
 """
 
 from __future__ import annotations
@@ -19,6 +21,20 @@ MAX_CHANGED_LINES = 200
 MAX_FILES = 5
 AGENT_TEST = re.compile(r"^agent_tests/test_[A-Za-z0-9_]+\.py$")
 _DIFF_HEADER = re.compile(r"^diff --git a/(\S+) b/(\S+)$")
+UNIFIED_DIFF_EXAMPLE = (
+    "diff --git a/order_service/pricing.py b/order_service/pricing.py\n"
+    "--- a/order_service/pricing.py\n"
+    "+++ b/order_service/pricing.py\n"
+    "@@ -1,3 +1,3 @@\n"
+    " def discount_cents(subtotal):\n"
+    "-    if subtotal > 10000:\n"
+    "+    if subtotal >= 10000:\n"
+    "         return subtotal // 10\n"
+)
+_FORMAT_EXPECTED = (
+    "Expected a git unified diff with diff --git, ---, +++, and @@ lines. "
+    "*** Begin Patch is not accepted."
+)
 
 _FORBIDDEN_NAMES = {
     "pyproject.toml",
@@ -67,8 +83,8 @@ def validate_patch(
 ) -> AcceptedPatch:
     """Accept a diff that is safe to apply onto ``workspace``.
 
-    ``git apply --check`` runs in a temporary copy. ``workspace`` is not modified
-    and the fixture package is not imported.
+    ``git apply --check --recount`` runs in a temporary copy. ``workspace`` is
+    not modified and the fixture package is not imported.
     """
     accepted = inspect_patch(
         patch,
@@ -96,7 +112,7 @@ def inspect_patch(
     sections = re.split(r"(?=^diff --git )", patch, flags=re.M)
     sections = [section for section in sections if section.startswith("diff --git ")]
     if not sections:
-        raise PatchRejected("format", "patch must be a git unified diff")
+        raise PatchRejected("format", f"patch must be a git unified diff. {_FORMAT_EXPECTED}")
 
     allowed = set(allowed_paths)
     files: list[str] = []
@@ -117,7 +133,7 @@ def inspect_patch(
 
 
 def ensure_applies(patch: str, workspace: Path) -> None:
-    """Run ``git apply --check`` in a disposable copy of ``workspace``."""
+    """Run ``git apply --check --recount`` in a disposable copy of ``workspace``."""
     if not workspace.is_dir():
         raise PatchRejected("workspace", f"workspace does not exist: {workspace}")
     with tempfile.TemporaryDirectory(prefix="vra-apply-") as tmp:
@@ -129,7 +145,7 @@ def ensure_applies(patch: str, workspace: Path) -> None:
             symlinks=False,
         )
         completed = subprocess.run(
-            ["git", "apply", "--check", "--whitespace=nowarn", "-"],
+            ["git", "apply", "--check", "--recount", "--whitespace=nowarn", "-"],
             input=patch.encode(),
             cwd=checkout,
             capture_output=True,
@@ -144,7 +160,7 @@ def _inspect_section(section: str, allowed: set[str]) -> tuple[str, int]:
     lines = section.splitlines()
     header = _DIFF_HEADER.match(lines[0])
     if header is None:
-        raise PatchRejected("format", "malformed diff header")
+        raise PatchRejected("format", f"malformed diff header. {_FORMAT_EXPECTED}")
     old_header = _strip_prefix(header.group(1), "a/")
     new_header = _strip_prefix(header.group(2), "b/")
     old_path: str | None = None
@@ -171,7 +187,7 @@ def _inspect_section(section: str, allowed: set[str]) -> tuple[str, int]:
                 raise PatchRejected("evaluator_path", "patch references evaluator_private")
 
     if old_path is None or new_path is None:
-        raise PatchRejected("format", "patch is missing ---/+++ paths")
+        raise PatchRejected("format", f"patch is missing ---/+++ paths. {_FORMAT_EXPECTED}")
     if new_path == "/dev/null" or old_path == "/dev/null" and new_path == "/dev/null":
         raise PatchRejected("delete", "file deletions are rejected")
     if old_path == "/dev/null":

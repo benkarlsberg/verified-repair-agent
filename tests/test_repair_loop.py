@@ -13,8 +13,15 @@ from repair_agent.cases import load_case
 from repair_agent.cli import main
 from repair_agent.config import load_defaults
 from repair_agent.evaluate import EvaluationRecord, SuiteOutcome, decide_verdict
-from repair_agent.loop import AttemptConfig, build_case_packet, initial_items, run_attempt
-from repair_agent.model import FakeModel, FakeTurn, Usage
+from repair_agent.loop import (
+    AttemptConfig,
+    build_case_packet,
+    initial_items,
+    iterative_instructions,
+    one_shot_instructions,
+    run_attempt,
+)
+from repair_agent.model import FakeModel, FakeTurn, ModelProviderError, Usage, one_shot_text_format
 from repair_agent.runner import RunnerResult
 
 
@@ -150,12 +157,12 @@ def test_token_budget_stops_before_the_request(tmp_path: Path) -> None:
 
 
 def test_retransmitted_input_counts_even_when_cached(tmp_path: Path) -> None:
-    calls = {"n": 0}
-
-    def estimator(_payload: object) -> int:
-        calls["n"] += 1
-        # The budget check and the pre-flight estimate both run before the first request.
-        return 100 if calls["n"] <= 2 else 900
+    def estimator(payload: object) -> int:
+        assert isinstance(payload, dict)
+        items = payload["input"]
+        assert isinstance(items, list)
+        # The first request is the system prompt plus the case packet.
+        return 100 if len(items) <= 2 else 900
 
     result, model = _run(
         tmp_path,
@@ -174,6 +181,89 @@ def test_retransmitted_input_counts_even_when_cached(tmp_path: Path) -> None:
     assert result.output_tokens == 10  # type: ignore[attr-defined]
     assert result.stop_reason == "tokens"  # type: ignore[attr-defined]
     assert result.input_tokens + result.output_tokens == 1010  # type: ignore[attr-defined]
+
+
+def test_finish_only_turn_stays_inside_the_token_budget(tmp_path: Path) -> None:
+    def estimator(payload: object) -> int:
+        assert isinstance(payload, dict)
+        tools = payload["tools"]
+        names = [tool["name"] for tool in tools] if isinstance(tools, list) else []
+        if names == ["finish"]:
+            return 50
+        return 800
+
+    result, model = _run(
+        tmp_path,
+        [
+            FakeTurn(
+                tool_calls=[("list_files", {})],
+                usage=Usage(input_tokens=1400, cached_input_tokens=1100, output_tokens=100, reasoning_tokens=20, complete=True),
+            ),
+            _finish("repaired"),
+        ],
+        settings=_settings(max_total_tokens=2000, max_output_tokens_per_response=400),
+        estimator=estimator,
+        evaluate=_eval_failed,
+    )
+    assert model.calls == 2
+    assert [tool["name"] for tool in model.seen_tools[0] or []] == [
+        "list_files",
+        "read_file",
+        "search_text",
+        "apply_patch",
+        "run_visible_tests",
+        "finish",
+    ]
+    assert [tool["name"] for tool in model.seen_tools[1] or []] == ["finish"]
+    assert result.stop_reason == "finish"  # type: ignore[attr-defined]
+    assert result.agent_claim == "repaired"  # type: ignore[attr-defined]
+    assert result.input_tokens == 1410  # type: ignore[attr-defined]
+    assert result.cached_input_tokens == 1100  # type: ignore[attr-defined]
+    assert result.output_tokens == 105  # type: ignore[attr-defined]
+    assert result.input_tokens + result.output_tokens <= 2000  # type: ignore[attr-defined]
+
+
+def test_provider_error_still_writes_an_infra_result(tmp_path: Path) -> None:
+    case = load_case("X00")
+    settings = _settings()
+
+    class _FailOnSecond(FakeModel):
+        def complete(self, items, *, tools, max_output_tokens, text_format=None):  # type: ignore[no-untyped-def]
+            if self.calls >= 1:
+                self.calls += 1
+                self.seen_inputs.append(items)
+                raise ModelProviderError("400 Unknown parameter: 'input[2].status'")
+            return super().complete(
+                items, tools=tools, max_output_tokens=max_output_tokens, text_format=text_format
+            )
+
+    def factory(workspace: Path) -> _FailOnSecond:
+        del workspace
+        return _FailOnSecond(
+            settings.model_id,
+            [FakeTurn(tool_calls=[("list_files", {})], usage=Usage(10, 0, 5, 0, True))],
+        )
+
+    result = run_attempt(
+        case,
+        method="iterative",
+        repetition=1,
+        settings=settings,
+        model_factory=factory,
+        runs_root=tmp_path,
+        runner=_VisibleRunner(),  # type: ignore[arg-type]
+        evaluate=_eval_failed,
+    )
+    saved = tmp_path / result.run_id / "result.json"
+    events = tmp_path / result.run_id / "events.jsonl"
+    assert saved.is_file()
+    assert events.is_file()
+    document = json.loads(saved.read_text(encoding="utf-8"))
+    assert document["status"] == "infra_error"
+    assert document["verification"] == "infra_error"
+    assert document["stop_reason"] == "provider"
+    assert "input[2].status" in document["limitations"][0]
+    assert result.status == "infra_error"
 
 
 def test_response_tool_and_patch_budgets_stop(tmp_path: Path) -> None:
@@ -252,6 +342,7 @@ def test_one_shot_malformed_output_is_rejected_without_a_retry(tmp_path: Path) -
     result, model = _run(tmp_path, [FakeTurn(text="this is not json")], method="one_shot")
     assert model.calls == 1
     assert model.seen_tools == [None]
+    assert model.seen_text_formats == [one_shot_text_format()]
     assert result.agent_claim is None  # type: ignore[attr-defined]
     assert result.verification == "rejected"  # type: ignore[attr-defined]
     assert result.stop_reason == "malformed_output"  # type: ignore[attr-defined]
@@ -278,7 +369,7 @@ def test_reasoning_secret_is_not_written_to_the_bundle(tmp_path: Path) -> None:
     bundle = tmp_path / result.run_id  # type: ignore[attr-defined]
     saved = bundle.read_text() if bundle.is_file() else "\n".join(path.read_text(encoding="utf-8") for path in bundle.rglob("*") if path.is_file())
     assert secret not in saved
-    assert any(secret in json.dumps(items) for items in model.seen_inputs[1:])
+    assert all(secret not in json.dumps(items) for items in model.seen_inputs)
 
 
 def test_case_packet_is_shared_and_has_no_oracle_paths() -> None:
@@ -298,6 +389,18 @@ def test_case_packet_is_shared_and_has_no_oracle_paths() -> None:
     assert "test_cancelled_label_is_spelled_with_two_ls" not in packet
     assert "Canceled" in packet
     assert "split:" not in packet
+    iterative_prompt = iterative_instructions(list(case.record.allowed_paths))
+    one_shot_prompt = one_shot_instructions(list(case.record.allowed_paths))
+    from repair_agent.tools import tool_schemas
+
+    apply_patch = next(tool for tool in tool_schemas() if tool["name"] == "apply_patch")
+    for text in (iterative_prompt, one_shot_prompt, apply_patch["description"], apply_patch["parameters"]["properties"]["patch"]["description"]):
+        assert "diff --git a/order_service/pricing.py b/order_service/pricing.py" in text
+        assert "--- a/order_service/pricing.py" in text
+        assert "+++ b/order_service/pricing.py" in text
+        assert "@@ -1,3 +1,3 @@" in text
+        assert "Begin Patch" in text
+    assert "Call finish once your reproduction test and the visible tests pass." in iterative_prompt
 
 
 def test_both_methods_record_the_same_model_id(tmp_path: Path) -> None:

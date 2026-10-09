@@ -7,9 +7,13 @@ and the ``tools`` parameter. The key is read from ``OPENAI_API_KEY`` only
 when a real client is constructed. It is never logged or written into a
 run bundle.
 
-Opaque reasoning items are replayed on the next request, because the
-Responses API needs them to continue a tool call. They are not returned as
-text and ``redact_items`` strips them before anything is persisted.
+Requests set ``store`` to false, so ``previous_response_id`` cannot continue
+a tool call: the provider does not keep the response. The next request
+resends prior input plus sanitized output items. Output-only fields
+(``status``, ``id``, annotations) are dropped, and reasoning items are not
+replayed. Token totals come from the provider ``usage`` object of each
+request that was actually sent, including retransmitted and cached input at
+full weight. Dropped reasoning items are not added back into that total.
 """
 
 from __future__ import annotations
@@ -44,6 +48,10 @@ class ModelTransportError(Exception):
 
 class ModelClosedError(Exception):
     """Model access was closed at the end of the attempt."""
+
+
+class ModelProviderError(Exception):
+    """A non-transient provider error, such as HTTP 400. Not retried."""
 
 
 @dataclass
@@ -95,9 +103,51 @@ class ModelClient(Protocol):
         *,
         tools: list[dict[str, Any]] | None,
         max_output_tokens: int,
+        text_format: dict[str, Any] | None = None,
     ) -> ModelTurn: ...
 
     def close(self) -> None: ...
+
+
+def one_shot_text_format() -> dict[str, Any]:
+    """Responses API JSON-schema format for the one-shot baseline.
+
+    The loop still validates the returned text with ``OneShotResponse``.
+    """
+    return {
+        "type": "json_schema",
+        "name": "one_shot_repair",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "claim": {
+                    "type": "string",
+                    "enum": ["repaired", "unresolved", "insufficient_evidence"],
+                },
+                "summary": {"type": "string"},
+                "limitations": {"type": "array", "items": {"type": "string"}},
+                "patch": {"type": "string"},
+            },
+            "required": ["claim", "summary", "limitations", "patch"],
+        },
+    }
+
+
+def items_for_input(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert response output items into Responses API input items.
+
+    Reasoning items are omitted. They are not valid continuation input when
+    the response was not stored. Token accounting does not invent a count
+    for them; the next request's provider usage is the source of truth.
+    """
+    prepared: list[dict[str, Any]] = []
+    for item in items:
+        if item.get("type") == "reasoning":
+            continue
+        prepared.append(_input_item(item))
+    return prepared
 
 
 def redact_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -206,29 +256,35 @@ class OpenAIModel:
         *,
         tools: list[dict[str, Any]] | None,
         max_output_tokens: int,
+        text_format: dict[str, Any] | None = None,
     ) -> ModelTurn:
         if self._closed:
             raise ModelClosedError("model access is closed")
-        response = self._create_with_retries(items, tools=tools, max_output_tokens=max_output_tokens)
+        response = self._create_with_retries(
+            items,
+            tools=tools,
+            max_output_tokens=max_output_tokens,
+            text_format=text_format,
+        )
         returned = _read(response, "model")
         if returned != self.model_id:
             raise ModelIdentityError(
                 f"Refusing to continue: requested {self.model_id}, provider returned {returned}."
             )
         output = _read(response, "output") or []
-        replay = [_item_dict(item) for item in output]
+        output_items = [_item_dict(item) for item in output]
         text_parts: list[str] = []
         calls: list[ToolCall] = []
         malformed = False
-        for item in replay:
+        for item in output_items:
             if item.get("type") == "reasoning":
                 continue
             if item.get("type") == "function_call":
-                raw = item.get("arguments") or ""
-                if not isinstance(raw, str):
-                    raw = json.dumps(raw)
+                raw_arguments = item.get("arguments") or ""
+                if not isinstance(raw_arguments, str):
+                    raw_arguments = json.dumps(raw_arguments)
                 try:
-                    parsed = json.loads(raw) if raw else {}
+                    parsed = json.loads(raw_arguments) if raw_arguments else {}
                 except json.JSONDecodeError:
                     parsed = None
                     malformed = True
@@ -240,7 +296,7 @@ class OpenAIModel:
                         call_id=str(item.get("call_id") or item.get("id") or ""),
                         name=str(item.get("name") or ""),
                         arguments=parsed,
-                        raw_arguments=raw,
+                        raw_arguments=raw_arguments,
                     )
                 )
                 continue
@@ -251,7 +307,7 @@ class OpenAIModel:
             tool_calls=calls,
             usage=_usage_from(response),
             model_id=self.model_id,
-            replay_items=replay,
+            replay_items=items_for_input(output_items),
             malformed=malformed,
         )
 
@@ -261,12 +317,19 @@ class OpenAIModel:
         *,
         tools: list[dict[str, Any]] | None,
         max_output_tokens: int,
+        text_format: dict[str, Any] | None,
     ) -> object:
         transient = _transient_types()
+        provider_errors = _provider_error_types()
         last: Exception | None = None
         for attempt in range(3):
             try:
-                return self._create(items, tools=tools, max_output_tokens=max_output_tokens)
+                return self._create(
+                    items,
+                    tools=tools,
+                    max_output_tokens=max_output_tokens,
+                    text_format=text_format,
+                )
             except transient as exc:
                 last = exc
                 message = scrub(f"{type(exc).__name__}: {exc}", self._api_key)
@@ -276,6 +339,10 @@ class OpenAIModel:
                     continue
                 logger.warning("transient OpenAI transport error; retries exhausted: %s", message)
                 raise ModelTransportError(message) from exc
+            except provider_errors as exc:
+                message = scrub(f"{type(exc).__name__}: {exc}", self._api_key)
+                logger.warning("OpenAI rejected the request: %s", message)
+                raise ModelProviderError(message) from exc
         raise ModelTransportError(scrub(str(last), self._api_key))
 
     def _create(
@@ -284,6 +351,7 @@ class OpenAIModel:
         *,
         tools: list[dict[str, Any]] | None,
         max_output_tokens: int,
+        text_format: dict[str, Any] | None,
     ) -> object:
         kwargs: dict[str, Any] = {
             "model": self.model_id,
@@ -294,6 +362,8 @@ class OpenAIModel:
         }
         if tools:
             kwargs["tools"] = tools
+        if text_format is not None:
+            kwargs["text"] = {"format": text_format}
         return self._sdk().responses.create(**kwargs)
 
     def _sdk(self) -> Any:
@@ -326,6 +396,7 @@ class FakeModel:
         self._turns = list(turns)
         self.seen_inputs: list[list[dict[str, Any]]] = []
         self.seen_tools: list[list[dict[str, Any]] | None] = []
+        self.seen_text_formats: list[dict[str, Any] | None] = []
         self.calls = 0
         self._closed = False
         self._call_index = 0
@@ -343,6 +414,7 @@ class FakeModel:
         *,
         tools: list[dict[str, Any]] | None,
         max_output_tokens: int,
+        text_format: dict[str, Any] | None = None,
     ) -> ModelTurn:
         del max_output_tokens
         if self._closed:
@@ -350,6 +422,7 @@ class FakeModel:
         self.calls += 1
         self.seen_inputs.append(json.loads(json.dumps(items, default=str)))
         self.seen_tools.append(tools)
+        self.seen_text_formats.append(text_format)
         if not self._turns:
             return ModelTurn(
                 text="",
@@ -430,6 +503,18 @@ def _transient_types() -> tuple[type[BaseException], ...]:
     return tuple(found)
 
 
+def _provider_error_types() -> tuple[type[BaseException], ...]:
+    """Non-transient API failures. ``BadRequestError`` is an ``APIStatusError``."""
+    try:
+        import openai
+    except ImportError:
+        return ()
+    status = getattr(openai, "APIStatusError", None)
+    if status is None:
+        return ()
+    return (status,)
+
+
 def _usage_from(response: object) -> Usage:
     usage = _read(response, "usage")
     if usage is None:
@@ -482,6 +567,41 @@ def _jsonable(value: object) -> object:
     if callable(dump):
         return _jsonable(dump(mode="json"))
     return str(value)
+
+
+def _input_item(item: dict[str, Any]) -> dict[str, Any]:
+    """Keep only fields the Responses API accepts on input."""
+    kind = item.get("type")
+    if kind == "function_call":
+        arguments = item.get("arguments")
+        if not isinstance(arguments, str):
+            arguments = json.dumps(arguments if arguments is not None else {})
+        call_id = item.get("call_id") or item.get("id") or ""
+        return {
+            "type": "function_call",
+            "call_id": str(call_id),
+            "name": str(item.get("name") or ""),
+            "arguments": arguments,
+        }
+    if kind == "function_call_output":
+        output = item.get("output")
+        if not isinstance(output, str):
+            output = json.dumps(output if output is not None else "")
+        return {
+            "type": "function_call_output",
+            "call_id": str(item.get("call_id") or ""),
+            "output": output,
+        }
+    if kind in {None, "message"}:
+        role = item.get("role") or "assistant"
+        if role not in {"assistant", "user", "system"}:
+            role = "assistant"
+        return {
+            "type": "message",
+            "role": role,
+            "content": [{"type": "output_text", "text": _message_text(item)}],
+        }
+    return {key: value for key, value in item.items() if key not in {"status", "id"} and value is not None}
 
 
 def _message_text(item: dict[str, Any]) -> str:

@@ -185,6 +185,40 @@ def test_evaluator_path_in_an_added_line_is_rejected() -> None:
     assert caught.value.code == "evaluator_path"
 
 
+def test_wrong_hunk_line_count_still_passes_apply_check(tmp_path: Path) -> None:
+    source = tmp_path / "order_service"
+    source.mkdir()
+    (source / "pricing.py").write_text("value = 1\n", encoding="utf-8")
+    patch = _diff("order_service/pricing.py", "value = 1\n", "value = 2\n")
+    lines = ["@@ -1,40 +1,40 @@" if line.startswith("@@") else line for line in patch.splitlines()]
+    bad = "\n".join(lines) + "\n"
+    import subprocess
+
+    rejected = subprocess.run(
+        ["git", "apply", "--check", "--whitespace=nowarn", "-"],
+        input=bad.encode(),
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    accepted = validate_patch(bad, allowed_paths=["order_service/pricing.py"], workspace=tmp_path)
+    assert accepted.files == ("order_service/pricing.py",)
+    assert (source / "pricing.py").read_text(encoding="utf-8") == "value = 1\n"
+
+
+def test_begin_patch_format_names_the_expected_unified_diff() -> None:
+    body = "*** Begin Patch\n*** Update File: order_service/pricing.py\n@@\n-value = 1\n+value = 2\n*** End Patch\n"
+    with pytest.raises(PatchRejected, match="Begin Patch") as caught:
+        inspect_patch(body, allowed_paths=["order_service/pricing.py"])
+    assert caught.value.code == "format"
+    message = str(caught.value)
+    assert "diff --git" in message
+    assert "---" in message
+    assert "+++" in message
+    assert "@@" in message
+
+
 def test_bug_patches_touch_only_their_allowlisted_file() -> None:
     root = Path(__file__).resolve().parents[1]
     import json

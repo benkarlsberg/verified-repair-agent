@@ -31,13 +31,17 @@ from repair_agent.model import (
     ModelClient,
     ModelClosedError,
     ModelIdentityError,
+    ModelProviderError,
     ModelTransportError,
     ModelTurn,
     Usage,
     estimate_cost,
     estimate_tokens,
+    items_for_input,
+    one_shot_text_format,
     redact_items,
 )
+from repair_agent.patch_policy import UNIFIED_DIFF_EXAMPLE
 from repair_agent.runner import Runner
 from repair_agent.schemas import RunResult
 from repair_agent.tools import ToolOutcome, ToolSurface, parse_tool_arguments, tool_schemas
@@ -133,6 +137,15 @@ class _Stop:
     skip_evaluator: bool = False
     forced_verification: str | None = None
     forced_detail: str | None = None
+    tool_calls_after: int = 0
+
+
+@dataclass
+class _RequestPlan:
+    tools: list[dict[str, object]] | None = None
+    estimated_input: int = 0
+    finish_only: bool = False
+    stop_reason: str | None = None
 
 
 def run_attempt(
@@ -189,7 +202,6 @@ def run_attempt(
         )
         if method == "one_shot":
             surface.source_edits_allowed = True
-        tools = tool_schemas() if method == "iterative" else None
         totals = _Totals()
         visible_logs: list[str] = []
         responses = 0
@@ -211,10 +223,6 @@ def run_attempt(
                 settings=settings,
                 responses=responses,
                 tool_calls=tool_calls,
-                items=items,
-                tools=tools,
-                used_tokens=totals.total,
-                estimator=token_estimate,
             )
             if reason is not None:
                 stop = _unresolved(reason)
@@ -225,24 +233,35 @@ def run_attempt(
                     response_summary="stopped before the next model request",
                 )
                 break
-            estimated = token_estimate({"input": items, "tools": tools})
+            plan = _request_plan(
+                method=method,
+                settings=settings,
+                items=items,
+                used_tokens=totals.total,
+                estimator=token_estimate,
+            )
+            if plan.stop_reason is not None:
+                stop = _unresolved(plan.stop_reason)
+                bundle.append(
+                    category="budget",
+                    success=False,
+                    request_summary=plan.stop_reason,
+                    response_summary="stopped before the next model request",
+                )
+                break
+            tools = plan.tools
+            estimated = plan.estimated_input
             try:
                 turn = model.complete(
                     items,
                     tools=tools,
                     max_output_tokens=settings.budgets.max_output_tokens_per_response,
+                    text_format=one_shot_text_format() if method == "one_shot" else None,
                 )
             except MissingAPIKeyError:
                 raise
             except ModelIdentityError as exc:
-                stop = _Stop(
-                    reason="model_identity",
-                    status="infra_error",
-                    skip_evaluator=True,
-                    forced_verification="infra_error",
-                    forced_detail=str(exc),
-                    limitations=["The provider returned a different model id."],
-                )
+                stop = _provider_failure("model_identity", exc, limitation="The provider returned a different model id.")
                 bundle.append(
                     category="model_response",
                     success=False,
@@ -250,33 +269,26 @@ def run_attempt(
                     response_summary=_clip(str(exc)),
                 )
                 break
-            except ModelTransportError as exc:
-                if responses == 0:
-                    stop = _Stop(
-                        reason="transport",
-                        status="infra_error",
-                        skip_evaluator=True,
-                        forced_verification="infra_error",
-                        forced_detail="provider transport failed",
-                        limitations=["The provider transport failed before a response."],
-                    )
-                else:
-                    stop = _unresolved("transport")
-                    stop.limitations.append("A later provider transport call failed.")
+            except ModelClosedError as exc:
+                stop = _provider_failure("model_closed", exc)
+                break
+            except (ModelTransportError, ModelProviderError) as exc:
+                reason_name = "transport" if isinstance(exc, ModelTransportError) else "provider"
+                stop = _provider_failure(reason_name, exc)
                 bundle.append(
-                    category="transport",
+                    category=reason_name,
                     success=False,
-                    request_summary="provider transport",
+                    request_summary="provider request failed",
                     response_summary=_clip(str(exc)),
                 )
                 break
-            except ModelClosedError as exc:
-                stop = _Stop(
-                    reason="model_closed",
-                    status="infra_error",
-                    skip_evaluator=True,
-                    forced_verification="infra_error",
-                    forced_detail=str(exc),
+            except Exception as exc:
+                stop = _provider_failure("provider", exc)
+                bundle.append(
+                    category="provider",
+                    success=False,
+                    request_summary="provider request failed",
+                    response_summary=_clip(f"{type(exc).__name__}: {exc}"),
                 )
                 break
             responses += 1
@@ -285,7 +297,7 @@ def run_attempt(
                 estimated_input=estimated,
                 max_output=settings.budgets.max_output_tokens_per_response,
             )
-            items.extend(turn.replay_items)
+            items.extend(items_for_input(turn.replay_items))
             bundle.append(
                 category="model_response",
                 success=not turn.malformed,
@@ -295,6 +307,17 @@ def run_attempt(
             )
             if method == "one_shot":
                 stop = _finish_one_shot(turn, surface, bundle)
+                break
+            if plan.finish_only:
+                stop = _consume_finish_only(
+                    turn,
+                    surface=surface,
+                    bundle=bundle,
+                    items=items,
+                    tool_calls=tool_calls,
+                    max_tool_calls=settings.budgets.max_tool_calls,
+                )
+                tool_calls = stop.tool_calls_after
                 break
             parsed = _validated_calls(turn)
             if parsed is None:
@@ -496,11 +519,16 @@ def iterative_instructions(allowed_paths: list[str]) -> str:
         "Existing tests and configuration are immutable.\n"
         "Write a reproduction and run the visible tests before you edit source. "
         "The reproduction should fail on the current code. After a source change, run the visible tests again.\n"
+        "Call finish once your reproduction test and the visible tests pass. "
+        "Do not keep investigating after that.\n"
         "Use only the provided tools. When you stop, call finish. "
         "claim is repaired, unresolved, or insufficient_evidence. "
         "Use repaired only when the reproduction failed before the edit and passed after, and the visible suite passed. "
         "Use unresolved when you do not have a fix you trust. "
         "Use insufficient_evidence when the report does not justify a code change.\n"
+        "apply_patch accepts only a git unified diff, in this exact shape:\n"
+        f"{UNIFIED_DIFF_EXAMPLE}\n"
+        "Do not send *** Begin Patch or any other patch format.\n"
         "You will not receive an independent evaluation."
     )
 
@@ -511,11 +539,13 @@ def one_shot_instructions(allowed_paths: list[str]) -> str:
         "You repair one deterministic defect in a local Python order service. "
         "You get one response. There are no tools and no test feedback.\n"
         f"The source diff may only touch: {allowed}.\n"
-        "Return a single JSON object and nothing else, with keys "
-        "claim, summary, limitations, and patch. "
+        "The response is a JSON object with keys claim, summary, limitations, and patch. "
         "claim is repaired, unresolved, or insufficient_evidence. "
         "patch is a git unified diff, or an empty string when you make no source change. "
         "limitations is an array of strings.\n"
+        "A source patch must be a git unified diff in this exact shape:\n"
+        f"{UNIFIED_DIFF_EXAMPLE}\n"
+        "Do not send *** Begin Patch or any other patch format.\n"
         "You will not receive an independent evaluation."
     )
 
@@ -641,10 +671,6 @@ def _budget_block(
     settings: AttemptConfig,
     responses: int,
     tool_calls: int,
-    items: list[dict[str, object]],
-    tools: list[dict[str, object]] | None,
-    used_tokens: int,
-    estimator: Callable[[object], int],
 ) -> str | None:
     budgets = settings.budgets
     if _clock_would_exceed(clock, started, budgets, extra=0):
@@ -653,11 +679,114 @@ def _budget_block(
         return "model_responses"
     if tool_calls >= budgets.max_tool_calls:
         return "tool_calls"
-    estimated = estimator({"input": items, "tools": tools})
-    remaining = budgets.max_total_tokens - used_tokens
-    if estimated + budgets.max_output_tokens_per_response > remaining:
-        return "tokens"
     return None
+
+
+def _request_plan(
+    *,
+    method: str,
+    settings: AttemptConfig,
+    items: list[dict[str, object]],
+    used_tokens: int,
+    estimator: Callable[[object], int],
+) -> _RequestPlan:
+    """Choose the next request, or stop before one that cannot fit.
+
+    A normal iterative round uses every tool. When that round's estimated
+    input plus the output cap does not fit in the remaining token budget,
+    one finish-only call is reserved if it fits. Cached tokens are not
+    subtracted: the estimator sees the input that will actually be sent.
+    """
+    remaining = settings.budgets.max_total_tokens - used_tokens
+    output_cap = settings.budgets.max_output_tokens_per_response
+    if method != "iterative":
+        estimated = estimator({"input": items, "tools": None})
+        if estimated + output_cap > remaining:
+            return _RequestPlan(stop_reason="tokens")
+        return _RequestPlan(tools=None, estimated_input=estimated)
+    all_tools = tool_schemas()
+    normal = estimator({"input": items, "tools": all_tools})
+    if normal + output_cap <= remaining:
+        return _RequestPlan(tools=all_tools, estimated_input=normal)
+    finish_tools = [tool for tool in all_tools if tool.get("name") == "finish"]
+    finish_estimate = estimator({"input": items, "tools": finish_tools})
+    if finish_estimate + output_cap <= remaining:
+        return _RequestPlan(tools=finish_tools, estimated_input=finish_estimate, finish_only=True)
+    return _RequestPlan(stop_reason="tokens")
+
+
+def _consume_finish_only(
+    turn: ModelTurn,
+    *,
+    surface: ToolSurface,
+    bundle: RunBundle,
+    items: list[dict[str, object]],
+    tool_calls: int,
+    max_tool_calls: int,
+) -> _Stop:
+    """Accept only ``finish`` on the reserved last call, then stop."""
+    parsed = _validated_calls(turn)
+    if parsed:
+        for call, arguments in parsed:
+            if call.name != "finish":
+                bundle.append(
+                    category="tool",
+                    tool_name=call.name,
+                    success=False,
+                    request_summary=_clip(call.raw_arguments),
+                    response_summary="this turn allows only finish",
+                )
+                continue
+            if tool_calls >= max_tool_calls:
+                stopped = _unresolved("tool_calls")
+                stopped.tool_calls_after = tool_calls
+                bundle.append(
+                    category="budget",
+                    success=False,
+                    request_summary="tool_calls",
+                    response_summary="stopped before another tool call",
+                )
+                return stopped
+            if arguments.get("__unknown__"):
+                outcome = surface.dispatch(call.name, {})
+            else:
+                outcome = surface.dispatch(call.name, arguments)
+            tool_calls += 1
+            items.append({"type": "function_call_output", "call_id": call.call_id, "output": outcome.model_text})
+            bundle.append(
+                category="tool",
+                tool_name=call.name,
+                success=outcome.ok,
+                request_summary=_clip(call.raw_arguments),
+                response_summary=_clip(outcome.model_text),
+            )
+            if outcome.finished:
+                stopped = _Stop(
+                    reason="finish",
+                    claim=outcome.claim,
+                    summary=outcome.summary,
+                    limitations=list(outcome.limitations),
+                    evidence=list(outcome.evidence),
+                    tool_calls_after=tool_calls,
+                )
+                return stopped
+    stopped = _unresolved("tokens")
+    stopped.tool_calls_after = tool_calls
+    return stopped
+
+
+def _provider_failure(reason: str, exc: BaseException, *, limitation: str | None = None) -> _Stop:
+    """Record a provider or infrastructure failure without dropping the bundle."""
+    detail = str(exc).strip() or reason
+    note = limitation or detail
+    return _Stop(
+        reason=reason,
+        status="infra_error",
+        skip_evaluator=True,
+        forced_verification="infra_error",
+        forced_detail=detail,
+        limitations=[note],
+    )
 
 
 def _clock_would_exceed(clock: Clock, started: float, budgets: Budgets, *, extra: float) -> bool:

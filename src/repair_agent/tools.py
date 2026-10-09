@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from repair_agent.patch_policy import PatchRejected, inspect_patch, validate_patch
+from repair_agent.patch_policy import UNIFIED_DIFF_EXAMPLE, PatchRejected, inspect_patch, validate_patch
 from repair_agent.runner import Runner, RunnerError
 
 MAX_READ_BYTES = 20 * 1024
@@ -102,10 +102,22 @@ def tool_schemas() -> list[dict[str, Any]]:
         ),
         _function(
             "apply_patch",
-            "Apply a git unified diff. Source edits must stay on the allowlisted paths. New files are allowed only as agent_tests/test_*.py. Write and run a reproduction before the first source edit.",
+            "Apply a git unified diff. Source edits must stay on the allowlisted paths. "
+            "New files are allowed only as agent_tests/test_*.py. "
+            "Write and run a reproduction before the first source edit. "
+            "The patch argument must be a unified diff in this shape, including the "
+            "diff --git, ---, +++, and @@ lines. *** Begin Patch is not accepted.\n"
+            f"{UNIFIED_DIFF_EXAMPLE}",
             {
                 "type": "object",
-                "properties": {"patch": {"type": "string", "description": "A git unified diff."}},
+                "properties": {
+                    "patch": {
+                        "type": "string",
+                        "description": "A git unified diff with diff --git, ---, +++, and @@ lines. "
+                        "*** Begin Patch is not accepted. "
+                        f"Example:\n{UNIFIED_DIFF_EXAMPLE}",
+                    }
+                },
                 "required": ["patch"],
                 "additionalProperties": False,
             },
@@ -298,7 +310,7 @@ class ToolSurface:
         except PatchRejected as exc:
             return self._error(exc.code, _safe(str(exc)))
         completed = subprocess.run(
-            ["git", "apply", "--whitespace=nowarn", "-"],
+            ["git", "apply", "--recount", "--whitespace=nowarn", "-"],
             input=patch.encode(),
             cwd=self.workspace,
             capture_output=True,

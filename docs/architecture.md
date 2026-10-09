@@ -13,7 +13,7 @@ model adapter      -- OpenAI Responses API, or a scripted fake model
 tool loop          -- list, read, search, patch, visible tests, finish
         |              one-shot: one JSON response, no tools
         v
-patch policy       -- allowlist, size limits, git apply --check
+patch policy       -- allowlist, size limits, git apply --check --recount
         |
         v
 model access ends
@@ -29,9 +29,9 @@ The host process calls the model and Docker. It does not import the order servic
 
 Agent tools resolve paths only inside that workspace. The initial prompt contains the issue, the public service contract, and the capped buggy source and visible tests. It does not contain the split, evaluator paths, or a reference fix.
 
-The iterative loop asks for a reproduction under `agent_tests/test_*.py` and refuses source edits until that test has been run. Visible test output can inform a later edit. One malformed iterative response may be repaired; that extra response counts toward the budgets. The one-shot baseline gets the same case packet, returns one JSON object, and a malformed response is rejected with no retry.
+The iterative loop asks for a reproduction under `agent_tests/test_*.py` and refuses source edits until that test has been run. Visible test output can inform a later edit. One malformed iterative response may be repaired; that extra response counts toward the budgets. The system prompt tells the agent to call `finish` once its reproduction and the visible tests pass. When the remaining token budget cannot fit another normal tool round, the loop makes one last call that allows only `finish`, if that call fits. The one-shot baseline gets the same case packet and one Responses API JSON-schema response. The text is still validated with Pydantic. A malformed response is rejected with no retry.
 
-Opaque reasoning items are replayed to the provider on the next tool-calling request. They are omitted from `events.jsonl` and `result.json`. The API key is read from `OPENAI_API_KEY` at runtime and is not written into a bundle.
+Responses are not stored. The next request resends sanitized function-call and assistant message items, without output-only fields such as `status`. Reasoning items are not replayed and are omitted from `events.jsonl` and `result.json`. Token totals are the provider usage of each request that was sent; cached input counts at full weight. The API key is read from `OPENAI_API_KEY` at runtime and is not written into a bundle.
 
 The evaluator rebuilds the original buggy tree, applies only the net source diff, and runs the ordinary suite and the protected suite. Agent-written tests are not part of that workspace. `agent_claim` and `verification` are both stored. A repaired claim with a failed verification stays a false repair claim.
 

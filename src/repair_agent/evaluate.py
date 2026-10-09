@@ -153,7 +153,7 @@ def _evaluate(
                 record = EvaluationRecord("rejected", None, None, f"patch rejected by policy ({exc.code})", evaluator_sha)
                 return record, "", "", {}
             applied = subprocess.run(
-                ["git", "apply", "--whitespace=nowarn", "-"],
+                ["git", "apply", "--recount", "--whitespace=nowarn", "-"],
                 input=source_patch.encode(),
                 cwd=workspace,
                 capture_output=True,

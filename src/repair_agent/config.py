@@ -43,8 +43,10 @@ class Budgets(BaseModel):
     max_model_responses: int = Field(ge=1)
     max_tool_calls: int = Field(ge=0)
     max_source_patch_submissions: int = Field(ge=0)
+    # Provisional until the final freeze. The value and the measured note live in defaults.json.
     max_total_tokens: int = Field(ge=1)
     max_output_tokens_per_response: int = Field(ge=1)
+    note: str | None = None
     test_timeout_seconds: float = Field(gt=0)
 
 
