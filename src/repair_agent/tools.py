@@ -16,7 +16,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from repair_agent.patch_policy import UNIFIED_DIFF_EXAMPLE, PatchRejected, inspect_patch, validate_patch
+from repair_agent.patch_policy import (
+    UNIFIED_DIFF_EXAMPLE,
+    PatchRejected,
+    format_apply_stderr,
+    inspect_patch,
+    prepare_patch,
+    validate_patch,
+)
 from repair_agent.runner import Runner, RunnerError
 
 MAX_READ_BYTES = 20 * 1024
@@ -273,58 +280,71 @@ class ToolSurface:
 
     def apply_patch(self, patch: str) -> ToolOutcome:
         try:
+            cleaned, wrapper_stripped = prepare_patch(patch)
+        except PatchRejected as exc:
+            return self._error(exc.code, str(exc))
+        try:
             inspected = inspect_patch(
-                patch,
+                cleaned,
                 allowed_paths=self.allowed_paths,
                 max_changed_lines=self.max_changed_lines,
                 max_files=self.max_files,
             )
         except PatchRejected as exc:
-            return self._error(exc.code, str(exc))
+            return self._error(exc.code, str(exc), wrapper_stripped=wrapper_stripped)
         source_files = [item for item in inspected.files if not item.startswith("agent_tests/")]
         if source_files and not self.source_edits_allowed:
             return self._error(
                 "reproduction_required",
                 "Add a test under agent_tests/test_*.py and run the visible tests before editing source.",
+                wrapper_stripped=wrapper_stripped,
             )
         if source_files and self.source_patches_applied >= self.max_source_patches:
+            payload = {
+                "ok": False,
+                "error": "patch_budget",
+                "message": "The source patch budget is exhausted. The latest valid source diff will be kept.",
+            }
+            if wrapper_stripped:
+                payload["wrapper_stripped"] = True
             return ToolOutcome(
                 ok=False,
-                model_text=_dump(
-                    {
-                        "ok": False,
-                        "error": "patch_budget",
-                        "message": "The source patch budget is exhausted. The latest valid source diff will be kept.",
-                    }
-                ),
+                model_text=_dump(payload),
                 budget_stop="patch_attempts",
             )
         try:
             validate_patch(
-                patch,
+                cleaned,
                 allowed_paths=self.allowed_paths,
                 workspace=self.workspace,
                 max_changed_lines=self.max_changed_lines,
                 max_files=self.max_files,
             )
         except PatchRejected as exc:
-            return self._error(exc.code, _safe(str(exc)))
+            message = str(exc) if exc.code == "apply_check" else _safe(str(exc))
+            return self._error(exc.code, message, wrapper_stripped=wrapper_stripped)
         completed = subprocess.run(
             ["git", "apply", "--recount", "--whitespace=nowarn", "-"],
-            input=patch.encode(),
+            input=cleaned.encode(),
             cwd=self.workspace,
             capture_output=True,
             check=False,
         )
         if completed.returncode != 0:
-            detail = completed.stderr.decode(errors="replace").strip().splitlines()
-            message = detail[0][:300] if detail else "git apply failed"
-            return self._error("apply_check", _safe(message))
+            message = format_apply_stderr(
+                completed.stderr.decode(errors="replace"),
+                fallback="git apply failed",
+            )
+            return self._error("apply_check", message, wrapper_stripped=wrapper_stripped)
         if source_files:
             self.source_patches_applied += 1
+        payload = {"ok": True, "files": list(inspected.files), "source": bool(source_files)}
+        if wrapper_stripped:
+            payload["wrapper_stripped"] = True
+            payload["note"] = "Stripped *** Begin Patch / *** End Patch wrapper lines around the unified diff."
         return ToolOutcome(
             ok=True,
-            model_text=_dump({"ok": True, "files": list(inspected.files), "source": bool(source_files)}),
+            model_text=_dump(payload),
             source_applied=bool(source_files),
         )
 
@@ -410,8 +430,12 @@ class ToolSurface:
         body["ok"] = True
         return ToolOutcome(ok=True, model_text=_dump(body))
 
-    def _error(self, code: str, message: str) -> ToolOutcome:
-        return ToolOutcome(ok=False, model_text=_dump({"ok": False, "error": code, "message": message}))
+    def _error(self, code: str, message: str, *, wrapper_stripped: bool = False) -> ToolOutcome:
+        payload: dict[str, Any] = {"ok": False, "error": code, "message": message}
+        if wrapper_stripped:
+            payload["wrapper_stripped"] = True
+            payload["note"] = "Stripped *** Begin Patch / *** End Patch wrapper lines around the unified diff."
+        return ToolOutcome(ok=False, model_text=_dump(payload))
 
 
 def parse_tool_arguments(name: str, arguments: dict[str, Any] | None) -> dict[str, Any] | None:

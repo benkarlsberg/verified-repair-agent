@@ -8,7 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from repair_agent.patch_policy import AcceptedPatch, PatchRejected, inspect_patch, validate_patch
+from repair_agent.patch_policy import (
+    AcceptedPatch,
+    PatchRejected,
+    format_apply_stderr,
+    inspect_patch,
+    prepare_patch,
+    validate_patch,
+)
 
 
 def _diff(path: str, before: str, after: str) -> str:
@@ -205,6 +212,55 @@ def test_wrong_hunk_line_count_still_passes_apply_check(tmp_path: Path) -> None:
     accepted = validate_patch(bad, allowed_paths=["order_service/pricing.py"], workspace=tmp_path)
     assert accepted.files == ("order_service/pricing.py",)
     assert (source / "pricing.py").read_text(encoding="utf-8") == "value = 1\n"
+
+
+def test_wrapper_lines_around_a_unified_diff_are_stripped(tmp_path: Path) -> None:
+    source = tmp_path / "order_service"
+    source.mkdir()
+    (source / "pricing.py").write_text("value = 1\n", encoding="utf-8")
+    diff = _diff("order_service/pricing.py", "value = 1\n", "value = 2\n")
+    trailing, trailing_stripped = prepare_patch(diff + "*** End Patch\n")
+    wrapped, wrapped_stripped = prepare_patch("*** Begin Patch\n" + diff + "*** End Patch\n")
+    assert trailing_stripped is True
+    assert wrapped_stripped is True
+    assert "*** End Patch" not in trailing
+    assert "*** Begin Patch" not in wrapped
+    assert "*** End Patch" not in wrapped
+    for raw in (diff + "*** End Patch\n", "*** Begin Patch\n" + diff + "*** End Patch\n"):
+        accepted = validate_patch(raw, allowed_paths=["order_service/pricing.py"], workspace=tmp_path)
+        assert accepted.files == ("order_service/pricing.py",)
+    untouched, untouched_stripped = prepare_patch(diff)
+    assert untouched_stripped is False
+    assert untouched == diff
+
+
+def test_update_file_body_is_still_rejected_when_a_diff_is_embedded() -> None:
+    diff = _diff("order_service/pricing.py", "value = 1\n", "value = 2\n")
+    body = "*** Begin Patch\n*** Update File: order_service/pricing.py\n" + diff + "*** End Patch\n"
+    with pytest.raises(PatchRejected, match="Begin Patch") as caught:
+        prepare_patch(body)
+    assert caught.value.code == "format"
+    plain = "*** Begin Patch\n*** Update File: order_service/pricing.py\n@@\n-value = 1\n+value = 2\n*** End Patch\n"
+    with pytest.raises(PatchRejected, match="Begin Patch") as plain_caught:
+        inspect_patch(plain, allowed_paths=["order_service/pricing.py"])
+    assert plain_caught.value.code == "format"
+
+
+def test_apply_stderr_puts_errors_before_warnings_and_drops_host_paths() -> None:
+    stderr = "\n".join(
+        [
+            "warning: recount: unexpected line: *** End Patch",
+            "error: patch failed: order_service/pricing.py:1",
+            "error: cannot read /tmp/vra-apply-abc/checkout/order_service/pricing.py",
+            "error: order_service/pricing.py: patch does not apply",
+        ]
+    )
+    message = format_apply_stderr(stderr, fallback="git apply --check failed")
+    assert message.index("error: patch failed") < message.index("warning: recount")
+    assert message.index("error: order_service/pricing.py") < message.index("warning: recount")
+    assert "/tmp/" not in message
+    assert "[path]" in message
+    assert "checkout" not in message
 
 
 def test_begin_patch_format_names_the_expected_unified_diff() -> None:

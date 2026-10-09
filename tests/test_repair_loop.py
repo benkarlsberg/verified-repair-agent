@@ -338,6 +338,25 @@ def test_format_retry_is_used_once(tmp_path: Path) -> None:
     assert again.agent_claim == "unresolved"  # type: ignore[attr-defined]
 
 
+def test_stripped_patch_wrapper_is_recorded_in_the_trace(tmp_path: Path) -> None:
+    from repair_agent.diffs import new_file_diff
+
+    diff = new_file_diff("agent_tests/test_repro.py", "def test_repro():\n    assert False\n")
+    wrapped = "*** Begin Patch\n" + diff + "*** End Patch\n"
+    result, _model = _run(
+        tmp_path,
+        [
+            FakeTurn(tool_calls=[("apply_patch", {"patch": wrapped})], usage=Usage(10, 0, 5, 0, True)),
+            _finish(),
+        ],
+        evaluate=_eval_failed,
+    )
+    events = (tmp_path / result.run_id / "events.jsonl").read_text(encoding="utf-8")  # type: ignore[attr-defined]
+    assert "wrapper_stripped" in events
+    assert "Stripped *** Begin Patch / *** End Patch wrapper lines" in events
+    assert result.stop_reason == "finish"  # type: ignore[attr-defined]
+
+
 def test_one_shot_malformed_output_is_rejected_without_a_retry(tmp_path: Path) -> None:
     result, model = _run(tmp_path, [FakeTurn(text="this is not json")], method="one_shot")
     assert model.calls == 1

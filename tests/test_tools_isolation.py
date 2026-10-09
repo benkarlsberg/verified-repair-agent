@@ -99,6 +99,39 @@ def test_agent_test_can_be_added_and_then_source_can_change(tmp_path: Path) -> N
     assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 2\n"
 
 
+def test_wrapper_around_a_unified_diff_is_applied_and_recorded(tmp_path: Path) -> None:
+    surface = _surface(tmp_path)
+    surface.source_edits_allowed = True
+    diff = unified_diff("order_service/pricing.py", "value = 1\n", "value = 2\n")
+    wrapped = "*** Begin Patch\n" + diff + "*** End Patch\n"
+    applied = surface.dispatch("apply_patch", {"patch": wrapped})
+    assert applied.ok is True
+    assert "wrapper_stripped" in applied.model_text
+    assert "Stripped" in applied.model_text
+    assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 2\n"
+    trailing = surface.dispatch(
+        "apply_patch",
+        {"patch": unified_diff("order_service/pricing.py", "value = 2\n", "value = 3\n") + "*** End Patch\n"},
+    )
+    assert trailing.ok is True
+    assert "wrapper_stripped" in trailing.model_text
+    assert (tmp_path / "order_service" / "pricing.py").read_text(encoding="utf-8") == "value = 3\n"
+
+
+def test_apply_failure_reports_error_lines_before_warnings(tmp_path: Path) -> None:
+    surface = _surface(tmp_path)
+    surface.source_edits_allowed = True
+    diff = unified_diff("order_service/pricing.py", "value = 9\n", "value = 2\n")
+    outcome = surface.dispatch("apply_patch", {"patch": diff + "garbage line\n"})
+    assert outcome.ok is False
+    assert "apply_check" in outcome.model_text
+    message = outcome.model_text
+    assert "error:" in message
+    assert message.index("error:") < message.index("warning:")
+    assert "/tmp/" not in message
+    assert str(tmp_path) not in message
+
+
 def test_wrong_hunk_count_applies_and_begin_patch_is_rejected(tmp_path: Path) -> None:
     surface = _surface(tmp_path)
     surface.source_edits_allowed = True

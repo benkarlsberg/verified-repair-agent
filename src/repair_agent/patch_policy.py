@@ -35,6 +35,8 @@ _FORMAT_EXPECTED = (
     "Expected a git unified diff with diff --git, ---, +++, and @@ lines. "
     "*** Begin Patch is not accepted."
 )
+_APPLY_MESSAGE_CAP = 500
+_ABSOLUTE_PATH = re.compile(r"(?:(?<=\s)|^)/(?:[^\s\"']+)")
 
 _FORBIDDEN_NAMES = {
     "pyproject.toml",
@@ -73,6 +75,73 @@ class AcceptedPatch:
     changed_lines: int
 
 
+def prepare_patch(patch: str) -> tuple[str, bool]:
+    """Strip a Begin/End wrapper around a unified diff.
+
+    The only lines removed are an opening ``*** Begin Patch`` line and a
+    trailing ``*** End Patch`` line. A ``*** Update File`` body, or any other
+    non-diff ``***`` line, is rejected. The returned flag is true when a
+    wrapper line was removed.
+    """
+    if not isinstance(patch, str) or "diff --git " not in patch:
+        return patch, False
+    lines = patch.splitlines()
+    end = len(lines)
+    while end > 0 and not lines[end - 1].strip():
+        end -= 1
+    core = list(lines[:end])
+    if not core:
+        return patch, False
+
+    stripped_end = False
+    if _wrapper_kind(core[-1]) == "end":
+        core.pop()
+        while core and not core[-1].strip():
+            core.pop()
+        stripped_end = True
+
+    first_diff = next((index for index, line in enumerate(core) if line.startswith("diff --git ")), None)
+    if first_diff is None:
+        return patch, False
+    prefix = core[:first_diff]
+    significant = [line for line in prefix if line.strip()]
+    stripped_begin = False
+    if significant:
+        kinds = [_wrapper_kind(line) for line in significant]
+        if kinds == ["begin"]:
+            core = core[first_diff:]
+            stripped_begin = True
+        else:
+            raise PatchRejected("format", f"patch must be a git unified diff. {_FORMAT_EXPECTED}")
+    for line in core:
+        if _wrapper_kind(line) in {"begin", "end", "other"}:
+            raise PatchRejected("format", f"patch must be a git unified diff. {_FORMAT_EXPECTED}")
+    if not stripped_begin and not stripped_end:
+        return patch, False
+    cleaned = "\n".join(core)
+    if not cleaned.endswith("\n"):
+        cleaned += "\n"
+    return cleaned, True
+
+
+def format_apply_stderr(stderr: str, *, fallback: str) -> str:
+    """Order ``error:`` lines ahead of ``warning:`` lines and drop host paths.
+
+    ``git apply --recount`` can print a harmless recount warning before the
+    error that explains why the diff did not apply. The model needs the error.
+    """
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    errors = [line for line in lines if line.lower().startswith("error:")]
+    warnings = [line for line in lines if line.lower().startswith("warning:")]
+    other = [line for line in lines if not line.lower().startswith(("error:", "warning:"))]
+    ordered = errors + warnings + other
+    text = "\n".join(ordered) if ordered else fallback
+    text = _ABSOLUTE_PATH.sub("[path]", text)
+    if len(text) > _APPLY_MESSAGE_CAP:
+        text = text[:_APPLY_MESSAGE_CAP].rstrip() + "\n[truncated]"
+    return text
+
+
 def validate_patch(
     patch: str,
     *,
@@ -106,6 +175,7 @@ def inspect_patch(
     """Parse and reject a diff without applying it or importing target code."""
     if not isinstance(patch, str) or not patch.strip():
         raise PatchRejected("empty", "patch is empty")
+    patch, _stripped = prepare_patch(patch)
     if "\0" in patch or "GIT binary patch" in patch or "\nBinary files " in f"\n{patch}":
         raise PatchRejected("binary", "binary patches are rejected")
 
@@ -136,6 +206,7 @@ def ensure_applies(patch: str, workspace: Path) -> None:
     """Run ``git apply --check --recount`` in a disposable copy of ``workspace``."""
     if not workspace.is_dir():
         raise PatchRejected("workspace", f"workspace does not exist: {workspace}")
+    patch, _stripped = prepare_patch(patch)
     with tempfile.TemporaryDirectory(prefix="vra-apply-") as tmp:
         checkout = Path(tmp) / "checkout"
         shutil.copytree(
@@ -152,8 +223,25 @@ def ensure_applies(patch: str, workspace: Path) -> None:
             check=False,
         )
     if completed.returncode != 0:
-        detail = completed.stderr.decode(errors="replace").strip() or "git apply --check failed"
-        raise PatchRejected("apply_check", detail.splitlines()[0][:300])
+        detail = format_apply_stderr(
+            completed.stderr.decode(errors="replace"),
+            fallback="git apply --check failed",
+        )
+        raise PatchRejected("apply_check", detail)
+
+
+def _wrapper_kind(line: str) -> str | None:
+    """Classify a raw patch line. Diff context and ``+``/``-`` lines are not wrappers."""
+    if not line or line[0] in {" ", "+", "-", "\\", "@"}:
+        return None
+    token = line.strip()
+    if token == "*** Begin Patch":
+        return "begin"
+    if token == "*** End Patch":
+        return "end"
+    if token.startswith("***"):
+        return "other"
+    return None
 
 
 def _inspect_section(section: str, allowed: set[str]) -> tuple[str, int]:

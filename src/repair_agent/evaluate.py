@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Literal
 
 from repair_agent.cases import LoadedCase, materialize_workspace, tree_sha256
-from repair_agent.patch_policy import PatchRejected, validate_patch
+from repair_agent.patch_policy import PatchRejected, prepare_patch, validate_patch
 from repair_agent.runner import Runner, RunnerError, RunnerResult
 
 Verification = Literal["passed", "failed", "rejected", "infra_error"]
@@ -142,6 +142,7 @@ def _evaluate(
             return record, "", "", {}
         if source_patch.strip():
             try:
+                source_patch, _stripped = prepare_patch(source_patch)
                 validate_patch(
                     source_patch,
                     allowed_paths=case.record.allowed_paths,
