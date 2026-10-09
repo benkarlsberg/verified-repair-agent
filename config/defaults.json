@@ -1,10 +1,25 @@
 {
   "schema_version": 1,
   "model": {
-    "provider": null,
-    "model_id": null,
-    "selection_status": "unset",
-    "note": "This repository does not call a model. The hosted model id stays unset until the adapter exists."
+    "provider": "openai",
+    "model_id": "gpt-5.4-mini-2026-03-17",
+    "alias": "gpt-5.4-mini",
+    "selection_status": "pinned",
+    "api": "responses",
+    "store": false,
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "request_timeout_seconds": 120,
+    "note": "Pinned to gpt-5.4-mini-2026-03-17, the dated snapshot listed on the OpenAI model page. gpt-5.4-mini is the alias for that snapshot. Iterative and one-shot calls use this same id. temperature and top_p are not sent; the request sets reasoning.effort and max_output_tokens. Function tools with reasoning effort use the Responses API."
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
   },
   "budgets": {
     "wall_clock_seconds": 600,

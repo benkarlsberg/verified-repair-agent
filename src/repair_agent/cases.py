@@ -239,7 +239,7 @@ def write_freeze(output: Path) -> dict[str, object]:
             "fixture sha256 covers benchmark/fixture, including visible tests.",
             "Held-out cases and D01–D08 protected tests are hashed only when the private directory is present.",
             "Private hashes omit VCS metadata, virtual environments, and caches.",
-            "This repository does not call a model. Controller and prompt hashes are not included yet.",
+            "Model id, budgets, and pricing live in config/defaults.json. Each run records its own prompt hash and controller commit.",
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -499,4 +499,152 @@ def _git_apply(patch: Path, workspace: Path) -> None:
         cwd=workspace,
         check=True,
         capture_output=True,
+    )
+
+
+class HeldOutRefused(Exception):
+    """A held-out case was requested without the explicit opt-in."""
+
+
+class CaseNotFound(Exception):
+    """No manifest entry matches the requested case id."""
+
+
+@dataclass(frozen=True)
+class LoadedCase:
+    """One case ready to materialize.
+
+    ``protected_dir`` is for the evaluator only. Agent prompts use ``issue_text``
+    and ``record.allowed_paths``, never the oracle paths.
+    """
+
+    record: BugCase | ProbeCase
+    manifest_path: Path
+    manifest_sha256: str
+    issue_text: str
+    bug_patch: Path | None
+    protected_dir: Path | None
+
+    @property
+    def case_id(self) -> str:
+        return self.record.case_id
+
+    @property
+    def kind(self) -> str:
+        return self.record.kind
+
+
+def load_case(case_id: str, *, allow_heldout: bool = False) -> LoadedCase:
+    """Load one case from the public manifests, or held-out when opted in."""
+    if case_id.startswith("H") and not allow_heldout:
+        raise HeldOutRefused(
+            f"{case_id} is held out. Pass --allow-heldout to run it. "
+            "Held-out attempts are not part of development runs."
+        )
+    private = locate_private_dir()
+    for name in ("dev", "example", "probe"):
+        path = repo_root() / PUBLIC_MANIFESTS[name]
+        loaded = _match_manifest(path, case_id, private)
+        if loaded is not None:
+            return loaded
+    if not allow_heldout:
+        raise CaseNotFound(f"unknown case: {case_id}")
+    if not private.present:
+        raise CaseNotFound(
+            f"{case_id} was not found in the public manifests, and the private "
+            f"benchmark directory is not present: {private.configured}"
+        )
+    path = private.configured / HELD_OUT_MANIFEST
+    if not path.is_file():
+        raise CaseNotFound(f"held-out manifest is missing: {path}")
+    loaded = _match_manifest(path, case_id, private)
+    if loaded is None:
+        raise CaseNotFound(f"unknown case: {case_id}")
+    return loaded
+
+
+def cases_for_split(split: str, *, allow_heldout: bool = False) -> list[LoadedCase]:
+    """Return cases in manifest order for a split the CLI can evaluate."""
+    if split == "heldout" and not allow_heldout:
+        raise HeldOutRefused(
+            "Refusing to evaluate the held-out split without --allow-heldout."
+        )
+    if split == "all" and not allow_heldout:
+        raise HeldOutRefused(
+            "Refusing to evaluate split 'all' without --allow-heldout, "
+            "because that split includes held-out cases."
+        )
+    names = {
+        "dev": ["dev"],
+        "probe": ["probe"],
+        "example": ["example"],
+        "heldout": ["heldout"],
+        "all": ["dev", "example", "probe", "heldout"],
+    }
+    if split not in names:
+        raise ValueError(f"unknown split: {split}")
+    private = locate_private_dir()
+    loaded: list[LoadedCase] = []
+    for name in names[split]:
+        if name == "heldout":
+            if not private.present:
+                raise CaseNotFound(
+                    f"private benchmark directory is not present: {private.configured}"
+                )
+            path = private.configured / HELD_OUT_MANIFEST
+        else:
+            path = repo_root() / PUBLIC_MANIFESTS[name]
+        if not path.is_file():
+            raise CaseNotFound(f"manifest is missing: {path}")
+        manifest = ManifestFile.model_validate_json(path.read_text())
+        for case in manifest.cases:
+            loaded.append(_loaded_from(case, path, private))
+    return loaded
+
+
+def materialize_workspace(dest: Path, loaded: LoadedCase) -> None:
+    """Copy a fresh buggy workspace. Probes copy the clean fixture."""
+    if loaded.bug_patch is None:
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(
+            fixture_root(),
+            dest,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            symlinks=False,
+        )
+        return
+    materialize(dest, loaded.bug_patch)
+
+
+def _match_manifest(path: Path, case_id: str, private: PrivateDir) -> LoadedCase | None:
+    if not path.is_file():
+        return None
+    manifest = ManifestFile.model_validate_json(path.read_text())
+    for case in manifest.cases:
+        if case.case_id == case_id:
+            return _loaded_from(case, path, private)
+    return None
+
+
+def _loaded_from(case: BugCase | ProbeCase, manifest_path: Path, private: PrivateDir) -> LoadedCase:
+    issue = _resolve(case.issue_path, private)
+    if issue is None:
+        raise CaseNotFound(f"{case.case_id}: issue file is missing ({case.issue_path})")
+    bug_patch: Path | None = None
+    protected: Path | None = None
+    if isinstance(case, BugCase):
+        bug_patch = _resolve(case.bug_patch, private)
+        if bug_patch is None:
+            raise CaseNotFound(f"{case.case_id}: bug patch is missing ({case.bug_patch})")
+        candidate = _resolve(case.evaluator_test_dir, private)
+        if candidate is not None and any(candidate.glob("test_*.py")):
+            protected = candidate
+    return LoadedCase(
+        record=case,
+        manifest_path=manifest_path,
+        manifest_sha256=file_sha256(manifest_path),
+        issue_text=issue.read_text(encoding="utf-8"),
+        bug_patch=bug_patch,
+        protected_dir=protected,
     )

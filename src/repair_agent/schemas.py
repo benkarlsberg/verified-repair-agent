@@ -92,7 +92,14 @@ class ProbeScoreFile(BaseModel):
 
 
 class RunResult(BaseModel):
-    """Canonical summary written at the end of a repair attempt. Not filled in yet."""
+    """Canonical summary written atomically at the end of one attempt.
+
+    ``agent_claim`` is what the model (or the controller, if the model never
+    finished) said. ``verification`` is the independent evaluator. Neither
+    field is rewritten to match the other. ``estimated_cost_usd`` is null and
+    ``cost_label`` is ``unavailable`` when usage is missing or cached tokens
+    were not reported.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -100,22 +107,26 @@ class RunResult(BaseModel):
     run_id: str
     case_id: str
     method: Literal["iterative", "one_shot"]
-    repetition: int
+    repetition: int = Field(ge=1)
     status: Literal["completed", "infra_error"]
     agent_claim: Literal["repaired", "unresolved", "insufficient_evidence"] | None = None
     verification: Literal["passed", "failed", "rejected", "infra_error"] | None = None
     summary: str = ""
     limitations: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
     source_files_changed: list[str] = Field(default_factory=list)
     patch_sha256: str | None = None
     visible_passed: bool | None = None
     protected_passed: bool | None = None
-    input_tokens: int = 0
-    output_tokens: int = 0
-    tool_calls: int = 0
-    patch_attempts: int = 0
-    elapsed_seconds: float = 0
+    input_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    reasoning_tokens: int | None = Field(default=None, ge=0)
+    tool_calls: int = Field(default=0, ge=0)
+    patch_attempts: int = Field(default=0, ge=0)
+    elapsed_seconds: float = Field(default=0, ge=0)
     estimated_cost_usd: float | None = None
+    cost_label: Literal["estimated", "unavailable"] = "unavailable"
     model_id: str | None = None
     provider: str | None = None
     controller_commit: str | None = None
@@ -124,8 +135,24 @@ class RunResult(BaseModel):
     manifest_sha256: str | None = None
     evaluator_sha256: str | None = None
     budgets: dict[str, Any] = Field(default_factory=dict)
+    sampling: dict[str, Any] = Field(default_factory=dict)
+    pricing: dict[str, Any] = Field(default_factory=dict)
+    reproduction_failed_on_original: bool | None = None
+    reproduction_passed_after_patch: bool | None = None
+    stop_reason: str | None = None
     started_at_utc: str
     finished_at_utc: str | None = None
+
+
+class OneShotResponse(BaseModel):
+    """The only payload the one-shot baseline may return."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    claim: Literal["repaired", "unresolved", "insufficient_evidence"]
+    summary: str = Field(min_length=1)
+    limitations: list[str] = Field(default_factory=list)
+    patch: str = ""
 
 
 class TraceEvent(BaseModel):

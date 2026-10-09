@@ -80,6 +80,7 @@ class Runner:
         targets: list[str],
         protected_dir: Path | None = None,
         timeout_seconds: float | None = None,
+        pytest_args: list[str] | None = None,
     ) -> RunnerResult:
         """Execute pytest. ``targets`` are workspace-relative, or ``/protected``."""
         workspace = workspace.resolve()
@@ -99,6 +100,7 @@ class Runner:
             workspace=workspace,
             protected=protected,
             targets=safe_targets,
+            pytest_args=pytest_args,
         )
         timeout = self.timeout_seconds if timeout_seconds is None else timeout_seconds
         started = time.monotonic()
@@ -154,6 +156,7 @@ class Runner:
         workspace: Path,
         protected: Path | None,
         targets: list[str],
+        pytest_args: list[str] | None = None,
     ) -> list[str]:
         """Argv for one container. Only the workspace, and optional protected tests, are mounted."""
         command = [
@@ -194,6 +197,7 @@ class Runner:
                 "-q",
                 "-s",
                 "--tb=short",
+                *(pytest_args or []),
                 *targets,
             ]
         )

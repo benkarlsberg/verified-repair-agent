@@ -14,16 +14,16 @@ Implemented:
 - example case X00, with its protected test and reference fix
 - patch policy
 - offline Docker runner
+- iterative repair loop and one-shot baseline
+- OpenAI adapter and a scripted fake model
+- independent evaluator and run bundles
 - `repair-agent validate-cases`
 - `repair-agent freeze`
+- `repair-agent run`
+- `repair-agent evaluate`
 
 Not implemented yet:
 
-- model adapter
-- repair loop and one-shot baseline
-- tool dispatch
-- per-attempt evaluation
-- run bundles
 - replay viewer
 - publish step
 - evaluation report
@@ -39,15 +39,15 @@ uv run repair-agent validate-cases --split all
 uv run repair-agent freeze --output freeze.json
 ```
 
-`pytest` covers the visible fixture suite, the patch policy, and the runner. The runner checks start a container and are skipped when Docker is not available. `validate-cases` does not skip those runs: without Docker it exits 1 and says that no fixture tests were executed.
+`pytest` covers the visible fixture suite, the patch policy, the runner, and the repair loop. The runner checks and the X00 fake-model pipeline start a container and are skipped when Docker is not available. `validate-cases` does not skip those runs: without Docker it exits 1 and says that no fixture tests were executed. Loop tests use the fake model and do not call the network.
 
-`repair-agent run`, `evaluate`, `report`, and `publish` exit 2. They are not implemented yet. Nothing in this repository calls a model or reads an API key.
+`repair-agent report` and `publish` exit 2. They are not implemented yet. The replay viewer is not implemented yet.
 
 ## Two repositories
 
 | Repository | What it holds |
 | --- | --- |
-| `benkarlsberg/verified-repair-agent` (this repo, public) | Fixture, visible tests, D01–D08 issues and bug patches, probe issues, example case X00, runner, patch policy |
+| `benkarlsberg/verified-repair-agent` (this repo, public) | Fixture, visible tests, D01–D08 issues and bug patches, probe issues, example case X00, runner, patch policy, repair loop, evaluator |
 | `benkarlsberg/verified-repair-agent-private` | `evaluator_private/` for every case, held-out cases H01–H04, `manifests/heldout.json`, probe scoring |
 
 Point `REPAIR_AGENT_PRIVATE_DIR` at a checkout of the private repo. The default is a gitignored `private/` directory. The layout the private repo must match is in [`docs/private-benchmark.md`](docs/private-benchmark.md).
@@ -88,20 +88,54 @@ The patch policy is a curated-task filter. It does not detect removal of an API 
 
 The benchmark is twelve hand-written defects in one service, plus three probes. Four of the defects are held out. A result on that set is not a claim about software repair in general, and it is not a comparison with commercial agents. D04 and H02 both involve order idempotency; the evaluation report has to say that this is within-service generalization, not transfer to unfamiliar code.
 
-This repository does not select or call a hosted model. `config/defaults.json` records the budgets and leaves the model id unset. No paid LLM calls are part of this setup.
+`config/defaults.json` pins `gpt-5.4-mini-2026-03-17` for both methods. That is the dated snapshot on the OpenAI model page; `gpt-5.4-mini` is its alias. Requests set `reasoning.effort` to `low` and do not send `temperature` or `top_p`. Reasoning tokens count as output and toward the 4,000-token response cap. Cost is estimated from the October 2026 prices on that page ($0.75 / 1M input, $0.075 / 1M cached input, $4.50 / 1M output). A missing cache split is labeled unavailable. No paid call is made unless you run `repair-agent run` or `evaluate` with a key.
+
+## Run an attempt
+
+`run` and `evaluate` read `OPENAI_API_KEY` from the environment when `--model openai` is selected (the default). They do not read a key file, and they do not write the key into `runs/`. `validate-cases`, `freeze`, and `--model fake` do not need a key.
+
+Point `REPAIR_AGENT_PRIVATE_DIR` at a checkout of the private benchmark before a development or held-out attempt. Without it, D01–D08 can still be attempted, but the evaluator has no protected tests and records `infra_error` once a source diff exists. An empty source diff on a bug case is `rejected`. Example case X00 carries its protected test in this repository.
+
+```bash
+export OPENAI_API_KEY=...
+export REPAIR_AGENT_PRIVATE_DIR=/path/to/verified-repair-agent-private
+
+uv run repair-agent run --case D01 --method iterative --repeat 1
+uv run repair-agent run --case D01 --method one_shot --repeat 1
+```
+
+`evaluate` runs a split. `--method both` alternates which method starts each repetition. Held-out cases are refused unless you pass `--allow-heldout`.
+
+```bash
+uv run repair-agent evaluate --split dev --method both --repeats 1
+uv run repair-agent evaluate --split heldout --method both --repeats 3 --allow-heldout
+```
+
+`--model fake` runs the same controller, patch policy, and Docker evaluator with a scripted model. `x00-pass` and `x00-fail` only apply to example case X00. `abstain` finishes with an empty diff on any case.
+
+```bash
+uv run repair-agent run --case X00 --method iterative --model fake --fake-script x00-pass --repeat 1
+uv run repair-agent run --case X00 --method iterative --model fake --fake-script x00-fail --repeat 1
+```
+
+Each attempt writes `runs/<run_id>/` with `result.json`, `events.jsonl`, `final.patch`, `visible_tests.txt`, `evaluator.json`, and `evaluator.txt`. `runs/` is gitignored. The evaluator runs after model access is closed, in a fresh workspace, and its output is not sent back to the model.
+
+Budgets for one attempt are 10 minutes, 12 model responses, 30 tool calls, 3 source patch submissions, 100,000 cumulative input plus output tokens, and 4,000 output tokens per response. Cached input still counts toward that token budget. The loop stops before a request whose estimated input plus the output cap would exceed the remaining tokens. A budget stop keeps the latest valid source diff and records an `unresolved` claim when `finish` was not called.
 
 ## Layout
 
 ```text
-src/repair_agent/     CLI, schemas, patch policy, runner, case validation
+src/repair_agent/     CLI, model adapter, loop, tools, evaluator, bundles
 benchmark/fixture/    correct order service and visible tests
 benchmark/cases/      D01–D08 issue text and bug patches
 benchmark/probes/     P01–P03 issue text
 benchmark/manifests/  dev.json and probes.json
 examples/             public X00 oracle
+config/               model id, budgets, pricing, service contract
 docker/               runner image
-tests/                policy, runner, and manifest checks
+tests/                policy, runner, loop, and manifest checks
 docs/                 architecture and private-benchmark layout
+runs/                 local attempt bundles, gitignored
 ```
 
-Stub modules (`model.py`, `loop.py`, `tools.py`, `evaluate.py`, `artifacts.py`, `publish.py`, `web.py`) are present and not implemented yet. See [`docs/architecture.md`](docs/architecture.md).
+`publish.py` and `web.py` are still stubs. See [`docs/architecture.md`](docs/architecture.md).
