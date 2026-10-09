@@ -27,6 +27,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Protocol
 
 from repair_agent.config import Pricing
+from repair_agent.schemas import SCRIPTED_MODEL_ID
 
 logger = logging.getLogger("repair_agent.model")
 

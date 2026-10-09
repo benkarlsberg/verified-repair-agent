@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Comparison · Verified Repair Agent{% endblock %}
+{% block body %}
+<h1>Comparison</h1>
+<p class="lede">Held-out counts are the headline. Development results sit below them and are labeled as development results. One-shot is the baseline: one response, no tool feedback.</p>
+<p>{{ bundle_count }} bundle{{ "" if bundle_count == 1 else "s" }} loaded.</p>
+
+{% macro rate_table(summary) %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Passed</th>
+        <th>Eligible completed</th>
+        <th>Infrastructure errors</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rate in summary.rates %}
+      <tr>
+        <td>{{ rate.method | method_label }}</td>
+        <td>{{ rate.passed }}</td>
+        <td>{{ rate.eligible }}</td>
+        <td>{{ rate.infra_errors }}</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td>total</td>
+        <td>{{ summary.passed }}</td>
+        <td>{{ summary.eligible }}</td>
+        <td>{{ summary.infra_errors | length }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% macro coverage_table(summary) %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Case</th><th>Iterative</th><th>One-shot</th></tr>
+    </thead>
+    <tbody>
+      {% for row in summary.coverage %}
+      <tr>
+        <td>{{ row.case_id }}</td>
+        <td>{{ row.iterative }}</td>
+        <td>{{ row.one_shot }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p>Cases with 3/3 on a method: {{ summary.full_success | join(", ") or "none" }}.</p>
+<p>Cases with at least 1/3 on a method: {{ summary.any_success | join(", ") or "none" }}.</p>
+{% endmacro %}
+
+{% macro matrix(summary) %}
+{% if summary.attempts %}
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Case</th>
+        <th>Method</th>
+        <th>Rep</th>
+        <th>Claim</th>
+        <th>Verdict</th>
+        <th>Ordinary</th>
+        <th>Protected</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in summary.attempts %}
+      <tr>
+        <td><a href="/runs/{{ item.run_id }}">{{ item.case_id }}</a></td>
+        <td>{{ item.method | method_label }}</td>
+        <td>{{ item.repetition }}</td>
+        <td>{{ item.agent_claim or "not recorded" }}</td>
+        <td>{{ item.verification or "not recorded" }}</td>
+        <td>{{ item.visible_passed | flag }}</td>
+        <td>{{ item.protected_passed | flag }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No attempts in this split.</p>
+{% endif %}
+{% endmacro %}
+
+{% macro named_list(title, items) %}
+<h3>{{ title }}</h3>
+{% if items %}
+<ul>
+  {% for item in items %}
+  <li>
+    <a href="/runs/{{ item.run_id }}">{{ item.case_id }}</a>
+    {{ item.method | method_label }} repetition {{ item.repetition }}:
+    claim {{ item.agent_claim or "not recorded" }},
+    verdict {{ item.verification or "not recorded" }}.
+    {{ item.summary }}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>None in this split.</p>
+{% endif %}
+{% endmacro %}
+
+<section>
+  <h2>{{ heldout.title }}</h2>
+  <p>{{ heldout.note }}</p>
+  <h3>Verified repairs</h3>
+  {{ rate_table(heldout) }}
+  <h3>Case coverage</h3>
+  {{ coverage_table(heldout) }}
+  <h3>Attempt matrix</h3>
+  {{ matrix(heldout) }}
+  {{ named_list("False repair claims", heldout.false_claims) }}
+  {{ named_list("Regressions (ordinary suite)", heldout.regressions) }}
+  {{ named_list("Protected-suite failures", heldout.protected_failures) }}
+</section>
+
+<section>
+  <h2>{{ dev.title }}</h2>
+  <p>{{ dev.note }}</p>
+  <h3>Verified repairs</h3>
+  {{ rate_table(dev) }}
+  <h3>Case coverage</h3>
+  {{ coverage_table(dev) }}
+  {{ named_list("False repair claims", dev.false_claims) }}
+  {{ named_list("Regressions (ordinary suite)", dev.regressions) }}
+  {{ named_list("Protected-suite failures", dev.protected_failures) }}
+</section>
+
+<section>
+  <h2>{{ probes.title }}</h2>
+  <p>{{ probes.note }}</p>
+  {% if probes.attempts %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Method</th>
+          <th>Rep</th>
+          <th>Empty source diff</th>
+          <th>Claim</th>
+          <th>Mechanical abstention</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in probes.attempts %}
+        <tr>
+          <td><a href="/runs/{{ item.run_id }}">{{ item.case_id }}</a></td>
+          <td>{{ item.method | method_label }}</td>
+          <td>{{ item.repetition }}</td>
+          <td>{{ "yes" if item.empty_source else "no" }}</td>
+          <td>{{ item.agent_claim or "not recorded" }}</td>
+          <td>{{ "yes" if item.mechanical_abstention else "no" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No probe attempts are in this recording set.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ example.title }}</h2>
+  <p>{{ example.note }}</p>
+  {{ matrix(example) }}
+  {{ named_list("False repair claims", example.false_claims) }}
+</section>
+
+<section>
+  <h2>Efficiency</h2>
+  <p>{{ pricing }}</p>
+  {% for summary in (heldout, dev, probes, example) %}
+  <h3>{{ summary.title }}</h3>
+  {% if summary.efficiency %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Measure</th>
+          <th>Median</th>
+          <th>Min</th>
+          <th>Max</th>
+          <th>Attempts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary.efficiency %}
+        <tr>
+          <td>{{ row.method | method_label }}</td>
+          <td>{{ row.measure }}</td>
+          <td>{{ row.median }}</td>
+          <td>{{ row.low }}</td>
+          <td>{{ row.high }}</td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No completed attempts in this split.</p>
+  {% endif %}
+  {% endfor %}
+</section>
+
+<section>
+  <h2>Limitations</h2>
+  <ul>
+    {% for item in limitations %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

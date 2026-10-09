@@ -1,4 +1,4 @@
-"""Pydantic contracts for manifests, probe scoring, and future run bundles."""
+"""Pydantic contracts for manifests, run bundles, and public replay exports."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 CASE_ID = r"^(D0[1-8]|H0[1-4]|P0[1-3]|X00)$"
 SHA256 = r"^[0-9a-f]{64}$"
 SOURCE_PATH = r"^order_service/[a-z_]+\.py$"
+SCRIPTED_MODEL_ID = "scripted-fake"
 
 
 class BugCase(BaseModel):
@@ -98,7 +99,8 @@ class RunResult(BaseModel):
     finished) said. ``verification`` is the independent evaluator. Neither
     field is rewritten to match the other. ``estimated_cost_usd`` is null and
     ``cost_label`` is ``unavailable`` when usage is missing or cached tokens
-    were not reported.
+    were not reported. A scripted fake model records ``not_applicable`` and
+    a null cost.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -126,7 +128,7 @@ class RunResult(BaseModel):
     patch_attempts: int = Field(default=0, ge=0)
     elapsed_seconds: float = Field(default=0, ge=0)
     estimated_cost_usd: float | None = None
-    cost_label: Literal["estimated", "unavailable"] = "unavailable"
+    cost_label: Literal["estimated", "unavailable", "not_applicable"] = "unavailable"
     model_id: str | None = None
     provider: str | None = None
     controller_commit: str | None = None
@@ -166,6 +168,75 @@ class TraceEvent(BaseModel):
     success: bool
     request_summary: str
     response_summary: str
+
+
+class PublicTraceEvent(BaseModel):
+    """One sanitized trace row. Summaries are short text, never a full prompt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seq: int = Field(ge=1)
+    timestamp_utc: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    tool_name: str | None = None
+    duration_ms: int | None = Field(default=None, ge=0)
+    success: bool
+    request_summary: str
+    response_summary: str
+
+
+class PublicRun(BaseModel):
+    """A replay bundle safe to put in the public viewer.
+
+    This is a separate schema from ``RunResult``. ``evaluator_sha256`` and
+    every evaluator log stay behind. ``issue`` is the public symptom text the
+    case page shows; the hosted viewer reads only this export.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1] = 1
+    run_id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+    case_id: str = Field(pattern=CASE_ID)
+    method: Literal["iterative", "one_shot"]
+    repetition: int = Field(ge=1)
+    status: Literal["completed", "infra_error"]
+    agent_claim: Literal["repaired", "unresolved", "insufficient_evidence"] | None = None
+    verification: Literal["passed", "failed", "rejected", "infra_error"] | None = None
+    summary: str = ""
+    limitations: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
+    source_files_changed: list[str] = Field(default_factory=list)
+    patch_sha256: str | None = None
+    visible_passed: bool | None = None
+    protected_passed: bool | None = None
+    input_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    reasoning_tokens: int | None = Field(default=None, ge=0)
+    tool_calls: int = Field(default=0, ge=0)
+    patch_attempts: int = Field(default=0, ge=0)
+    elapsed_seconds: float = Field(default=0, ge=0)
+    estimated_cost_usd: float | None = None
+    cost_label: Literal["estimated", "unavailable", "not_applicable"] = "unavailable"
+    model_id: str | None = None
+    provider: str | None = None
+    controller_commit: str | None = None
+    fixture_sha: str
+    prompt_sha256: str | None = None
+    manifest_sha256: str | None = None
+    budgets: dict[str, Any] = Field(default_factory=dict)
+    sampling: dict[str, Any] = Field(default_factory=dict)
+    pricing: dict[str, Any] = Field(default_factory=dict)
+    reproduction_failed_on_original: bool | None = None
+    reproduction_passed_after_patch: bool | None = None
+    stop_reason: str | None = None
+    started_at_utc: str = Field(min_length=1)
+    finished_at_utc: str = Field(min_length=1)
+    issue: str = ""
+    trace: list[PublicTraceEvent] = Field(default_factory=list)
+    source_diff: str = ""
+    visible_tests: str = ""
 
 
 def _is_source_path(path: str) -> bool:

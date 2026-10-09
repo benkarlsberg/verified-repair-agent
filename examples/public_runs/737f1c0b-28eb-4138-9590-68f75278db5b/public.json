@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "run_id": "737f1c0b-28eb-4138-9590-68f75278db5b",
+  "case_id": "X00",
+  "method": "iterative",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "The cancelled status is labeled with two Ls. A reproduction failed on the original code and passed after the edit.",
+  "limitations": [],
+  "evidence": [
+    "agent_tests/test_repro.py"
+  ],
+  "source_files_changed": [
+    "order_service/example_ops.py"
+  ],
+  "patch_sha256": "4e51fab8b62d2f2121f36688a00a00bcb17f4bd6acbcaedd786f13b9bbf105b0",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 600,
+  "cached_input_tokens": 0,
+  "output_tokens": 200,
+  "reasoning_tokens": 0,
+  "tool_calls": 5,
+  "patch_attempts": 1,
+  "elapsed_seconds": 5.688,
+  "estimated_cost_usd": null,
+  "cost_label": "not_applicable",
+  "model_id": "scripted-fake",
+  "provider": "fake",
+  "controller_commit": "fa70ef7722c18306ea2a74b9790e7be820233013",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "c47af990437f5e02699c0db05ac51cc25198171a41b5efe81d48c0d592d821bd",
+  "manifest_sha256": "0ebedab75127ed447441dbaf20c0d27010078d97cc9baf23a8049fe4018fcbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": true,
+  "reproduction_passed_after_patch": true,
+  "stop_reason": "finish",
+  "started_at_utc": "2026-10-09T04:10:47Z",
+  "finished_at_utc": "2026-10-09T04:10:52Z",
+  "issue": "# EXAMPLE ONLY. This is not a benchmark case.\n\nThe display label for a cancelled order is misspelled. This case exists so the public repository can exercise the evaluator. It is not one of D01–D08 or H01–H04.\n\nExample: status \"cancelled\" should be labeled \"Cancelled\". Status \"open\" should be labeled \"Open\".\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T04:10:47Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T04:10:47Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"function_call\", \"call_id\": \"call_1_1\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_repro.py b/agent_tests/test_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_repro.py\\\\n@@ -0,0 +1,7 @@\\\\n+\\\\\\\"\\\\\\\"\\\\\\\"Reproduction for the cancelled-order display label.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n+\\\\n+from order_service.example_ops import status_label\\\\n+\\\\n+\\\\n+def test_cancelled_display_label() -> None:\\\\n+    assert status_label(\\\\\\\"cancelled\\\\\\\") == \\\\\\\"Cancelled\\\\\\\"\\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_repro.py b/agent_tests/test_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_repro.py\\\\n@@ -0,0 +1,7 @@\\\\n+\\\\\\\"\\\\\\\"\\\\\\\"Reproduction for the cancelled-order display label.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n+\\\\n+from order_service.example_ops import status_label\\\\n+\\\\n+\\\\n+def test_cancelled_display_label() -> None:\\\\n+    assert status_label(\\\\\\\"cancelled\\\\\\\") == \\\\\\\"Cancelled\\\\\\\"\\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_1_1\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_repro.py b/agent_tests/test_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_repro.py\\\\n@@ -0,0 +1,7 @@\\\\n+\\\\\\\"\\\\\\\"\\\\\\\"Reproduction for the cancelled-order display label.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n+\\\\n+from order_service.example_ops import status_label\\\\n+\\\\n+\\\\n+def test_cancelled_display_label() -> None:\\\\n+    assert status_label(\\\\\\\"cancelled\\\\\\\") == \\\\\\\"Cancelled\\\\\\\"\\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T04:10:47Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\": \"diff --git a/agent_tests/test_repro.py b/agent_tests/test_repro.py\\nnew file mode 100644\\n--- dev/null\\n+++ b/agent_tests/test_repro.py\\n@@ -0,0 +1,7 @@\\n+\\\"\\\"\\\"Reproduction for the cancelled-order display label.\\\"\\\"\\\"\\n+\\n+from order_service.example_ops import status_label\\n+\\n+\\n+def test_cancelled_display_label() -> None:\\n+    assert status_label(\\\"cancelled\\\") == \\\"Cancelled\\\"\\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"agent_tests/test_repro.py\"], \"source\": false}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T04:10:47Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "5 items; last={\"type\": \"function_call\", \"call_id\": \"call_2_1\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_2_1\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T04:10:48Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": false,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": false, \"exit_code\": 1, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"...................................................................F\\n=================================== FAILURES ===================================\\n_________________________ test_cancelled_display_label _________________________\\nagent_tests/test_repro.py:7: in test_cancelled_display_label\\n    assert status_label(\\\"cancelled\\\") == \\\"Cancelled\\\"\\nE   AssertionError: assert 'Canceled' == 'Cancelled'\\nE     \\nE     - Cancelled\\nE     ?       -\\nE     + Canceled\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n=========================== short test summary info ============================\\nFAILED agent_tests/test_repro.py::test_cancelled_display_label - AssertionErr...\\n1 failed, 67 passed, 1 warning in 0.31s\"}"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T04:10:48Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "7 items; last={\"type\": \"function_call\", \"call_id\": \"call_3_1\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancelled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancelled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_3_1\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancelled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 7,
+      "timestamp_utc": "2026-10-09T04:10:48Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\": \"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\n--- a/order_service/example_ops.py\\n+++ b/order_service/example_ops.py\\n@@ -6,7 +6,7 @@\\n \\n _LABELS = {\\n     \\\"open\\\": \\\"Open\\\",\\n-    \\\"cancelled\\\": \\\"Canceled\\\",\\n+    \\\"cancelled\\\": \\\"Cancelled\\\",\\n }\\n \\n \\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/example_ops.py\"], \"source\": true}"
+    },
+    {
+      "seq": 8,
+      "timestamp_utc": "2026-10-09T04:10:48Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "9 items; last={\"type\": \"function_call\", \"call_id\": \"call_4_1\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_4_1\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 9,
+      "timestamp_utc": "2026-10-09T04:10:49Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"....................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n68 passed, 1 warning in 0.30s\"}"
+    },
+    {
+      "seq": 10,
+      "timestamp_utc": "2026-10-09T04:10:49Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "11 items; last={\"type\": \"function_call\", \"call_id\": \"call_5_1\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status is labeled with two Ls. A reproduction failed on the original code and passed after the edit.\\\", \\\"limitations\\\": [], \\\"evidence\\\": [\\\"agent_tests/test_repro.py\\\"]}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"finish\", \"arguments\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status is labeled with two Ls. A reproduction failed on the original code and passed after the edit.\\\", \\\"limitations\\\": [], \\\"evidence\\\": [\\\"agent_tests/test_repro.py\\\"]}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_5_1\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status is labeled with two Ls. A reproduction failed on the original code and passed after the edit.\\\", \\\"limitations\\\": [], \\\"evidence\\\": [\\\"agent_tests/test_repro.py\\\"]}\"}]}"
+    },
+    {
+      "seq": 11,
+      "timestamp_utc": "2026-10-09T04:10:49Z",
+      "category": "tool",
+      "tool_name": "finish",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"claim\": \"repaired\", \"summary\": \"The cancelled status is labeled with two Ls. A reproduction failed on the original code and passed after the edit.\", \"limitations\": [], \"evidence\": [\"agent_tests/test_repro.py\"]}",
+      "response_summary": "{\"ok\": true, \"claim\": \"repaired\", \"stopped\": true}"
+    },
+    {
+      "seq": 12,
+      "timestamp_utc": "2026-10-09T04:10:49Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 13,
+      "timestamp_utc": "2026-10-09T04:10:52Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 14,
+      "timestamp_utc": "2026-10-09T04:10:52Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=finish"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/example_ops.py b/order_service/example_ops.py\n--- a/order_service/example_ops.py\n+++ b/order_service/example_ops.py\n@@ -6,7 +6,7 @@\n \n _LABELS = {\n     \"open\": \"Open\",\n-    \"cancelled\": \"Canceled\",\n+    \"cancelled\": \"Cancelled\",\n }\n \n \n",
+  "visible_tests": "...................................................................F\n=================================== FAILURES ===================================\n_________________________ test_cancelled_display_label _________________________\nagent_tests/test_repro.py:7: in test_cancelled_display_label\n    assert status_label(\"cancelled\") == \"Cancelled\"\nE   AssertionError: assert 'Canceled' == 'Cancelled'\nE     \nE     - Cancelled\nE     ?       -\nE     + Canceled\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED agent_tests/test_repro.py::test_cancelled_display_label - AssertionErr...\n1 failed, 67 passed, 1 warning in 0.31s\n\n....................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n68 passed, 1 warning in 0.30s\n"
+}

@@ -27,6 +27,7 @@ from repair_agent.config import Budgets, Defaults, Pricing, load_contract, load_
 from repair_agent.diffs import diff_against_snapshot, snapshot_sources
 from repair_agent.evaluate import EvaluationRecord, evaluate_patch
 from repair_agent.model import (
+    SCRIPTED_MODEL_ID,
     MissingAPIKeyError,
     ModelClient,
     ModelClosedError,
@@ -180,7 +181,7 @@ def run_attempt(
 
         materialize_workspace(workspace, case)
         model = model_factory(workspace)
-        if model.model_id != settings.model_id:
+        if not _scripted_client(model) and model.model_id != settings.model_id:
             raise ModelIdentityError(
                 f"Refusing to continue: configured model is {settings.model_id}, "
                 f"client is {model.model_id}."
@@ -416,7 +417,9 @@ def run_attempt(
         finished = active_clock.utc_now()
         cached = totals.cached_input_tokens if totals.cached_known and totals.complete else None
         reasoning = totals.reasoning_tokens if totals.reasoning_known and totals.complete else None
-        if totals.complete and totals.cached_known:
+        if model.provider == "fake":
+            cost, label = None, "not_applicable"
+        elif totals.complete and totals.cached_known:
             cost, label = estimate_cost(
                 input_tokens=totals.input_tokens,
                 cached_input_tokens=totals.cached_input_tokens,
@@ -449,7 +452,7 @@ def run_attempt(
             elapsed_seconds=round(max(0.0, active_clock.monotonic() - started_mono), 3),
             estimated_cost_usd=cost,
             cost_label=label,  # type: ignore[arg-type]
-            model_id=settings.model_id,
+            model_id=model.model_id,
             provider=model.provider,
             controller_commit=controller_commit(),
             fixture_sha=case.record.fixture_sha,
@@ -480,6 +483,11 @@ def run_attempt(
         if model is not None:
             model.close()
         workspace_dir.cleanup()
+
+
+def _scripted_client(model: ModelClient) -> bool:
+    """The ``--model fake`` client is not the pinned hosted model."""
+    return model.provider == "fake" and model.model_id == SCRIPTED_MODEL_ID
 
 
 def build_case_packet(case: LoadedCase, workspace: Path, contract: str) -> str:

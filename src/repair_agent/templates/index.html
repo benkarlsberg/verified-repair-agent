@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Verified Repair Agent{% endblock %}
+{% block body %}
+<h1>Recorded investigations</h1>
+<p class="lede">A local agent proposes patches for deterministic bugs in a small Python order service. An independent evaluator decides whether the patch holds. This site only replays finished attempts.</p>
+
+<section>
+  <h2>Benchmark limits</h2>
+  <ul class="limits">
+    {% for item in limits %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section>
+  <h2>Cases</h2>
+  {% if cards %}
+  <div class="cards">
+    {% for card in cards %}
+    <a class="card" href="/cases/{{ card.case_id }}">
+      <p class="split">{{ card.split }}</p>
+      <h3>{{ card.case_id }}</h3>
+      <p class="count">{{ card.count }} recorded run{{ "" if card.count == 1 else "s" }}</p>
+      <ul class="outcomes">
+        {% for label, count in card.outcomes %}
+        <li>{{ label }} {{ count }}</li>
+        {% endfor %}
+      </ul>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No published runs are loaded.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Every recorded run</h2>
+  {% if runs %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Method</th>
+          <th>Rep</th>
+          <th>Agent claim</th>
+          <th>Evaluator verdict</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a href="/cases/{{ run.case_id }}">{{ run.case_id }}</a></td>
+          <td>{{ run.method | method_label }}</td>
+          <td>{{ run.repetition }}</td>
+          <td>{{ run.agent_claim or "not recorded" }}</td>
+          <td>{{ run.verification or "not recorded" }}</td>
+          <td><a href="/runs/{{ run.run_id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No published runs are loaded.</p>
+  {% endif %}
+</section>
+
+<p class="foot">{{ bundle_count }} bundle{{ "" if bundle_count == 1 else "s" }} loaded. Schema version 1.</p>
+{% endblock %}

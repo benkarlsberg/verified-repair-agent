@@ -451,6 +451,21 @@ def test_fake_cli_does_not_copy_the_key_into_the_bundle(
     assert main(["run", "--case", "X00", "--method", "one_shot", "--model", "fake", "--fake-script", "abstain", "--runs", "runs"]) == 0
     blob = "\n".join(path.read_text(encoding="utf-8") for path in (tmp_path / "runs").rglob("*") if path.is_file())
     assert "sk-should-not-be-stored" not in blob
+    result = json.loads(next((tmp_path / "runs").glob("*/result.json")).read_text(encoding="utf-8"))
+    assert result["provider"] == "fake"
+    assert result["model_id"] == "scripted-fake"
+    assert result["estimated_cost_usd"] is None
+    assert result["cost_label"] == "not_applicable"
+    from repair_agent.publish import publish
+
+    public_root = tmp_path / "public_runs"
+    publish(tmp_path / "runs", public_root)
+    public = json.loads(next(public_root.glob("*/public.json")).read_text(encoding="utf-8"))
+    assert public["provider"] == "fake"
+    assert public["model_id"] == "scripted-fake"
+    assert public["estimated_cost_usd"] is None
+    assert public["cost_label"] == "not_applicable"
+    assert "gpt-5.4-mini" not in public["model_id"]
 
 
 def test_verdict_rules() -> None:
