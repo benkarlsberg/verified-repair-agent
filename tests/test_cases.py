@@ -166,9 +166,21 @@ def test_tree_sha256_ignores_checkout_parents_and_local_junk(tmp_path: Path) -> 
     assert tree_sha256(fixture_root()) == FIXTURE_SHA
 
 
-def test_later_commands_are_not_implemented() -> None:
+def test_the_suite_cannot_construct_the_real_client() -> None:
+    import openai
+
+    with pytest.raises(AssertionError, match="real OpenAI client"):
+        openai.OpenAI(api_key="sk-live")
+
+
+def test_run_and_evaluate_refuse_a_missing_key(capsys: pytest.CaptureFixture[str]) -> None:
+    import os
+
+    assert "OPENAI_API_KEY" not in os.environ
     assert main(["run", "--case", "D01", "--method", "iterative"]) == 2
+    assert "OPENAI_API_KEY" in capsys.readouterr().err
     assert main(["evaluate", "--split", "dev", "--method", "both"]) == 2
+    assert "OPENAI_API_KEY" in capsys.readouterr().err
 
 
 @pytest.mark.skipif(not docker_available(), reason="Docker is not available")
