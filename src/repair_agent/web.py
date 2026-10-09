@@ -26,7 +26,7 @@ from repair_agent.measures import (
     split_of,
     summarize,
 )
-from repair_agent.schemas import PublicRun
+from repair_agent.schemas import SCRIPTED_MODEL_ID, PublicRun
 
 SCHEMA_VERSION = 1
 RECORDED_LINE = "Recorded investigations; run the agent locally using the repository instructions."
@@ -137,6 +137,7 @@ def create_app(public_dir: Path | None = None) -> FastAPI:
             {
                 "run": match,
                 "false_claim": match.agent_claim == "repaired" and match.verification in {"failed", "rejected"},
+                "scripted": _scripted(match),
                 "cost": _cost(match),
             },
         )
@@ -269,7 +270,13 @@ def _flag(value: bool | None) -> str:
     return "not recorded"
 
 
+def _scripted(run: PublicRun) -> bool:
+    return run.provider == "fake" or run.model_id == SCRIPTED_MODEL_ID
+
+
 def _cost(run: PublicRun) -> str:
+    if run.cost_label == "not_applicable" or _scripted(run):
+        return "not applicable"
     if run.cost_label != "estimated" or run.estimated_cost_usd is None:
         return "unavailable"
     return f"${run.estimated_cost_usd:.6f} estimated"

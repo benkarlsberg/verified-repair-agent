@@ -61,6 +61,18 @@ def test_routes_render_example_bundles() -> None:
     assert any("False repair claim" in page for page in pages)
     assert "<form" not in index.text.lower()
     assert "upload" not in index.text.lower()
+    assert "scripted-fake" in index.text
+    assert "not applicable" in index.text
+    assert "not applicable" in comparison.text
+    assert "gpt-5.4-mini" not in comparison.text
+    for page in pages:
+        assert "Scripted fake model" in page
+        assert "did not call a hosted model" in page
+        assert "scripted-fake" in page
+        assert "provider fake" in page
+        assert "not applicable" in page
+        assert "gpt-5.4-mini" not in page
+        assert "$0." not in page
 
 
 def test_unknown_ids_are_404_and_html_is_escaped(tmp_path: Path) -> None:
@@ -115,6 +127,40 @@ def test_resolve_uses_examples_and_ignores_raw_runs(tmp_path: Path, monkeypatch)
     assert resolve_public_dir(tmp_path) == tmp_path / "examples" / "public_runs"
     monkeypatch.setenv("REPAIR_AGENT_PUBLIC_RUNS", str(tmp_path / "public_runs"))
     assert resolve_public_dir(tmp_path) == tmp_path / "public_runs"
+
+
+def test_scripted_run_page_does_not_invent_a_dollar_cost(tmp_path: Path) -> None:
+    run_id = "44444444-4444-4444-4444-444444444444"
+    payload = PublicRun(
+        run_id=run_id,
+        case_id="X00",
+        method="one_shot",
+        repetition=1,
+        status="completed",
+        agent_claim="repaired",
+        verification="failed",
+        summary="A scripted miss.",
+        fixture_sha="c" * 64,
+        started_at_utc="2026-10-09T00:00:00Z",
+        finished_at_utc="2026-10-09T00:00:01Z",
+        issue="A public issue.",
+        provider="fake",
+        model_id="scripted-fake",
+        cost_label="not_applicable",
+        estimated_cost_usd=None,
+        input_tokens=120,
+        output_tokens=40,
+    )
+    run_dir = tmp_path / run_id
+    run_dir.mkdir()
+    (run_dir / "public.json").write_text(payload.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    page = TestClient(create_app(tmp_path)).get(f"/runs/{run_id}")
+    assert page.status_code == 200
+    assert "Scripted fake model. This attempt did not call a hosted model." in page.text
+    assert "Model scripted-fake · provider fake · cost not applicable" in page.text
+    assert "not applicable" in page.text
+    assert "gpt-5.4-mini" not in page.text
+    assert "$" not in page.text
 
 
 def test_app_starts_without_a_model_key(monkeypatch) -> None:

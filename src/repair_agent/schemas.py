@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 CASE_ID = r"^(D0[1-8]|H0[1-4]|P0[1-3]|X00)$"
 SHA256 = r"^[0-9a-f]{64}$"
 SOURCE_PATH = r"^order_service/[a-z_]+\.py$"
+SCRIPTED_MODEL_ID = "scripted-fake"
 
 
 class BugCase(BaseModel):
@@ -98,7 +99,8 @@ class RunResult(BaseModel):
     finished) said. ``verification`` is the independent evaluator. Neither
     field is rewritten to match the other. ``estimated_cost_usd`` is null and
     ``cost_label`` is ``unavailable`` when usage is missing or cached tokens
-    were not reported.
+    were not reported. A scripted fake model records ``not_applicable`` and
+    a null cost.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -126,7 +128,7 @@ class RunResult(BaseModel):
     patch_attempts: int = Field(default=0, ge=0)
     elapsed_seconds: float = Field(default=0, ge=0)
     estimated_cost_usd: float | None = None
-    cost_label: Literal["estimated", "unavailable"] = "unavailable"
+    cost_label: Literal["estimated", "unavailable", "not_applicable"] = "unavailable"
     model_id: str | None = None
     provider: str | None = None
     controller_commit: str | None = None
@@ -216,7 +218,7 @@ class PublicRun(BaseModel):
     patch_attempts: int = Field(default=0, ge=0)
     elapsed_seconds: float = Field(default=0, ge=0)
     estimated_cost_usd: float | None = None
-    cost_label: Literal["estimated", "unavailable"] = "unavailable"
+    cost_label: Literal["estimated", "unavailable", "not_applicable"] = "unavailable"
     model_id: str | None = None
     provider: str | None = None
     controller_commit: str | None = None

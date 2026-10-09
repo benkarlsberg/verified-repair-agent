@@ -37,7 +37,7 @@ LIMITATIONS = (
     "Probe explanations are reviewed manually. The abstention table records the mechanical part of the rubric only.",
     "Docker limits reduce exposure for this owned fixture. They are not a strong boundary against hostile arbitrary code. The patch policy is a curated-task filter, not a malware detector.",
     "Protected tests can be inspected by code running in the evaluator container. Host-side hashes and fixed test discovery are the checks this release uses.",
-    "Cost figures are estimates from the dated prices stored on each attempt. They are not invoices. A missing cache split is labeled unavailable.",
+    "Cost figures are estimates from the dated prices stored on each attempt. They are not invoices. A missing cache split is labeled unavailable. A scripted fake model is labeled not applicable and is not priced.",
     "A repaired claim stays a repaired claim when the evaluator records failed or rejected. That pair is a false repair claim.",
 )
 
@@ -187,8 +187,16 @@ def summarize(attempts: list[Attempt], split: str) -> SplitSummary:
 
 def pricing_note(attempts: list[Attempt]) -> str:
     """Dated price assumption taken from the attempts themselves."""
+    scripted = [item for item in attempts if item.cost_label == "not_applicable"]
+    if attempts and len(scripted) == len(attempts):
+        return (
+            "Every attempt in this set used a scripted fake model. "
+            "Estimated cost is not applicable. No hosted-model price was applied."
+        )
     seen: list[dict[str, Any]] = []
     for attempt in attempts:
+        if attempt.cost_label == "not_applicable":
+            continue
         pricing = attempt.pricing
         if pricing and pricing not in seen:
             seen.append(pricing)
@@ -210,6 +218,8 @@ def pricing_note(attempts: list[Attempt]) -> str:
         "Cached input uses the cached rate when the provider reported a cache split. "
         "Otherwise the attempt's cost is unavailable. These are estimates, not invoices."
     )
+    if scripted:
+        lines.append("Scripted attempts are labeled not applicable and are left out of the cost range.")
     return " ".join(lines)
 
 
@@ -307,9 +317,21 @@ def _efficiency(attempts: list[Attempt]) -> list[EfficiencyRow]:
             for item in group
             if item.cost_label == "estimated" and item.estimated_cost_usd is not None
         ]
+        scripted = [item for item in group if item.cost_label == "not_applicable"]
         if priced:
             median, low, high = _range([float(value) for value in priced], _dollars)
             rows.append(EfficiencyRow(method, "estimated cost (USD)", median, low, high, len(priced)))
+        elif scripted and len(scripted) == len(group):
+            rows.append(
+                EfficiencyRow(
+                    method,
+                    "estimated cost (USD)",
+                    "not applicable",
+                    "not applicable",
+                    "not applicable",
+                    len(scripted),
+                )
+            )
         else:
             rows.append(
                 EfficiencyRow(method, "estimated cost (USD)", "unavailable", "unavailable", "unavailable", 0)

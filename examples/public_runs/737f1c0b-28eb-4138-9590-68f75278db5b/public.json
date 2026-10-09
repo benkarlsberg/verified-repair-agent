@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "run_id": "7747c531-bf88-43ea-92da-d7df3e9e1a2d",
+  "run_id": "737f1c0b-28eb-4138-9590-68f75278db5b",
   "case_id": "X00",
   "method": "iterative",
   "repetition": 1,
@@ -24,12 +24,12 @@
   "reasoning_tokens": 0,
   "tool_calls": 5,
   "patch_attempts": 1,
-  "elapsed_seconds": 15.336,
-  "estimated_cost_usd": 0.00135,
-  "cost_label": "estimated",
-  "model_id": "gpt-5.4-mini-2026-03-17",
+  "elapsed_seconds": 5.688,
+  "estimated_cost_usd": null,
+  "cost_label": "not_applicable",
+  "model_id": "scripted-fake",
   "provider": "fake",
-  "controller_commit": "357823e1adeb6f69e6466520e5d46b41c279f479",
+  "controller_commit": "fa70ef7722c18306ea2a74b9790e7be820233013",
   "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
   "prompt_sha256": "c47af990437f5e02699c0db05ac51cc25198171a41b5efe81d48c0d592d821bd",
   "manifest_sha256": "0ebedab75127ed447441dbaf20c0d27010078d97cc9baf23a8049fe4018fcbd8",
@@ -62,13 +62,13 @@
   "reproduction_failed_on_original": true,
   "reproduction_passed_after_patch": true,
   "stop_reason": "finish",
-  "started_at_utc": "2026-10-09T03:45:32Z",
-  "finished_at_utc": "2026-10-09T03:45:47Z",
+  "started_at_utc": "2026-10-09T04:10:47Z",
+  "finished_at_utc": "2026-10-09T04:10:52Z",
   "issue": "# EXAMPLE ONLY. This is not a benchmark case.\n\nThe display label for a cancelled order is misspelled. This case exists so the public repository can exercise the evaluator. It is not one of D01–D08 or H01–H04.\n\nExample: status \"cancelled\" should be labeled \"Cancelled\". Status \"open\" should be labeled \"Open\".\n",
   "trace": [
     {
       "seq": 1,
-      "timestamp_utc": "2026-10-09T03:45:32Z",
+      "timestamp_utc": "2026-10-09T04:10:47Z",
       "category": "prompt",
       "tool_name": null,
       "duration_ms": null,
@@ -78,7 +78,7 @@
     },
     {
       "seq": 2,
-      "timestamp_utc": "2026-10-09T03:45:32Z",
+      "timestamp_utc": "2026-10-09T04:10:47Z",
       "category": "model_response",
       "tool_name": null,
       "duration_ms": null,
@@ -88,7 +88,7 @@
     },
     {
       "seq": 3,
-      "timestamp_utc": "2026-10-09T03:45:32Z",
+      "timestamp_utc": "2026-10-09T04:10:47Z",
       "category": "tool",
       "tool_name": "apply_patch",
       "duration_ms": null,
@@ -98,7 +98,7 @@
     },
     {
       "seq": 4,
-      "timestamp_utc": "2026-10-09T03:45:32Z",
+      "timestamp_utc": "2026-10-09T04:10:47Z",
       "category": "model_response",
       "tool_name": null,
       "duration_ms": null,
@@ -108,7 +108,7 @@
     },
     {
       "seq": 5,
-      "timestamp_utc": "2026-10-09T03:45:43Z",
+      "timestamp_utc": "2026-10-09T04:10:48Z",
       "category": "tool",
       "tool_name": "run_visible_tests",
       "duration_ms": null,
@@ -118,7 +118,7 @@
     },
     {
       "seq": 6,
-      "timestamp_utc": "2026-10-09T03:45:43Z",
+      "timestamp_utc": "2026-10-09T04:10:48Z",
       "category": "model_response",
       "tool_name": null,
       "duration_ms": null,
@@ -128,7 +128,7 @@
     },
     {
       "seq": 7,
-      "timestamp_utc": "2026-10-09T03:45:43Z",
+      "timestamp_utc": "2026-10-09T04:10:48Z",
       "category": "tool",
       "tool_name": "apply_patch",
       "duration_ms": null,
@@ -138,7 +138,7 @@
     },
     {
       "seq": 8,
-      "timestamp_utc": "2026-10-09T03:45:43Z",
+      "timestamp_utc": "2026-10-09T04:10:48Z",
       "category": "model_response",
       "tool_name": null,
       "duration_ms": null,
@@ -148,17 +148,17 @@
     },
     {
       "seq": 9,
-      "timestamp_utc": "2026-10-09T03:45:44Z",
+      "timestamp_utc": "2026-10-09T04:10:49Z",
       "category": "tool",
       "tool_name": "run_visible_tests",
       "duration_ms": null,
       "success": true,
       "request_summary": "{}",
-      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"....................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n68 passed, 1 warning in 0.31s\"}"
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"....................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n68 passed, 1 warning in 0.30s\"}"
     },
     {
       "seq": 10,
-      "timestamp_utc": "2026-10-09T03:45:44Z",
+      "timestamp_utc": "2026-10-09T04:10:49Z",
       "category": "model_response",
       "tool_name": null,
       "duration_ms": null,
@@ -168,7 +168,7 @@
     },
     {
       "seq": 11,
-      "timestamp_utc": "2026-10-09T03:45:44Z",
+      "timestamp_utc": "2026-10-09T04:10:49Z",
       "category": "tool",
       "tool_name": "finish",
       "duration_ms": null,
@@ -178,7 +178,7 @@
     },
     {
       "seq": 12,
-      "timestamp_utc": "2026-10-09T03:45:44Z",
+      "timestamp_utc": "2026-10-09T04:10:49Z",
       "category": "model_closed",
       "tool_name": null,
       "duration_ms": null,
@@ -188,7 +188,7 @@
     },
     {
       "seq": 13,
-      "timestamp_utc": "2026-10-09T03:45:47Z",
+      "timestamp_utc": "2026-10-09T04:10:52Z",
       "category": "evaluation",
       "tool_name": null,
       "duration_ms": null,
@@ -198,7 +198,7 @@
     },
     {
       "seq": 14,
-      "timestamp_utc": "2026-10-09T03:45:47Z",
+      "timestamp_utc": "2026-10-09T04:10:52Z",
       "category": "result",
       "tool_name": null,
       "duration_ms": null,
@@ -208,5 +208,5 @@
     }
   ],
   "source_diff": "diff --git a/order_service/example_ops.py b/order_service/example_ops.py\n--- a/order_service/example_ops.py\n+++ b/order_service/example_ops.py\n@@ -6,7 +6,7 @@\n \n _LABELS = {\n     \"open\": \"Open\",\n-    \"cancelled\": \"Canceled\",\n+    \"cancelled\": \"Cancelled\",\n }\n \n \n",
-  "visible_tests": "...................................................................F\n=================================== FAILURES ===================================\n_________________________ test_cancelled_display_label _________________________\nagent_tests/test_repro.py:7: in test_cancelled_display_label\n    assert status_label(\"cancelled\") == \"Cancelled\"\nE   AssertionError: assert 'Canceled' == 'Cancelled'\nE     \nE     - Cancelled\nE     ?       -\nE     + Canceled\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED agent_tests/test_repro.py::test_cancelled_display_label - AssertionErr...\n1 failed, 67 passed, 1 warning in 0.31s\n\n....................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n68 passed, 1 warning in 0.31s\n"
+  "visible_tests": "...................................................................F\n=================================== FAILURES ===================================\n_________________________ test_cancelled_display_label _________________________\nagent_tests/test_repro.py:7: in test_cancelled_display_label\n    assert status_label(\"cancelled\") == \"Cancelled\"\nE   AssertionError: assert 'Canceled' == 'Cancelled'\nE     \nE     - Cancelled\nE     ?       -\nE     + Canceled\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED agent_tests/test_repro.py::test_cancelled_display_label - AssertionErr...\n1 failed, 67 passed, 1 warning in 0.31s\n\n....................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n68 passed, 1 warning in 0.30s\n"
 }

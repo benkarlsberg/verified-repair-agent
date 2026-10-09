@@ -24,7 +24,7 @@ from repair_agent.cases import (
 from repair_agent.cases import repo_root
 from repair_agent.fake_scripts import FakeScriptError, build_fake_turns
 from repair_agent.loop import AttemptConfig, evaluate_split, run_repetitions
-from repair_agent.model import FakeModel, MissingAPIKeyError, ModelIdentityError, OpenAIModel
+from repair_agent.model import SCRIPTED_MODEL_ID, FakeModel, MissingAPIKeyError, ModelIdentityError, OpenAIModel
 from repair_agent.publish import PublishError, publish
 from repair_agent.report import ReportError, write_report
 
@@ -182,7 +182,7 @@ def _require_key_if_needed(model_name: str, settings: AttemptConfig) -> None:
 def _factory(model_name: str, script: str, method: str, settings: AttemptConfig):
     def build(workspace: Path):
         if model_name == "fake":
-            return FakeModel(settings.model_id, build_fake_turns(script, workspace, method))
+            return FakeModel(SCRIPTED_MODEL_ID, build_fake_turns(script, workspace, method))
         return OpenAIModel.from_env(
             model_id=settings.model_id,
             reasoning_effort=settings.reasoning_effort,

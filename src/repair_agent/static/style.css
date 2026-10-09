@@ -59,7 +59,8 @@ nav { display: flex; gap: 1rem; }
 
 .banner,
 .demo,
-.callout {
+.callout,
+.scripted {
   background: var(--paper);
   border-left: 3px solid var(--accent);
   padding: 0.7rem 0.9rem;
@@ -69,6 +70,8 @@ nav { display: flex; gap: 1rem; }
 .demo { border-left-color: var(--mark); }
 
 .callout { border-left-color: var(--mark); }
+
+.scripted { border-left-color: var(--accent); }
 
 h1, h2, h3 {
   font-family: Georgia, "Iowan Old Style", Palatino, serif;

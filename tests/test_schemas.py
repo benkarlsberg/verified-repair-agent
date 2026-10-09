@@ -22,6 +22,33 @@ def test_public_run_rejects_unknown_keys() -> None:
         PublicRun.model_validate(payload)
 
 
+def test_scripted_cost_label_is_allowed_and_unknown_labels_are_rejected() -> None:
+    payload = _public()
+    payload["cost_label"] = "not_applicable"
+    payload["provider"] = "fake"
+    payload["model_id"] = "scripted-fake"
+    run = PublicRun.model_validate(payload)
+    assert run.estimated_cost_usd is None
+    assert run.cost_label == "not_applicable"
+    payload["cost_label"] = "free"
+    with pytest.raises(ValidationError):
+        PublicRun.model_validate(payload)
+    private = {
+        "run_id": "local",
+        "case_id": "X00",
+        "method": "one_shot",
+        "repetition": 1,
+        "status": "completed",
+        "fixture_sha": "c" * 64,
+        "started_at_utc": "2026-10-09T00:00:00Z",
+        "cost_label": "not_applicable",
+        "provider": "fake",
+        "model_id": "scripted-fake",
+    }
+    recorded = RunResult.model_validate(private)
+    assert recorded.estimated_cost_usd is None
+
+
 def test_public_run_requires_a_finished_timestamp() -> None:
     payload = _public()
     payload["finished_at_utc"] = ""

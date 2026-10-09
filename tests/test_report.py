@@ -83,6 +83,22 @@ def test_efficiency_reports_median_and_range() -> None:
     assert "0.003000" in dev
 
 
+def test_scripted_attempts_are_not_priced() -> None:
+    attempt = _attempt(
+        "X00",
+        method="one_shot",
+        cost=None,
+        cost_label="not_applicable",
+        model_id="scripted-fake",
+        provider="fake",
+    )
+    text = render_report([attempt])
+    example = text.split("## Example case")[1].split("## Limitations")[0]
+    assert "| estimated cost (USD) | not applicable | not applicable | not applicable |" in example
+    assert "Estimated cost is not applicable" in text
+    assert "gpt-5.4-mini" not in text
+
+
 def test_report_command_writes_the_file(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     _write(runs, case_id="X00", method="one_shot", verification="passed", claim="repaired")
@@ -142,6 +158,9 @@ def _attempt(
     tokens_out: int = 5,
     tools: int = 1,
     cost: float | None = 0.001,
+    cost_label: str | None = None,
+    model_id: str = "gpt-5.4-mini-2026-03-17",
+    provider: str = "openai",
     repetition: int = 1,
 ):
     from repair_agent.measures import Attempt, split_of
@@ -163,7 +182,7 @@ def _attempt(
         tool_calls=tools,
         elapsed_seconds=seconds,
         estimated_cost_usd=cost,
-        cost_label="estimated" if cost is not None else "unavailable",
+        cost_label=cost_label if cost_label is not None else ("estimated" if cost is not None else "unavailable"),
         pricing={
             "as_of": "2026-10-09",
             "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
@@ -172,8 +191,8 @@ def _attempt(
             "cached_input_per_million": 0.075,
             "output_per_million": 4.5,
         },
-        model_id="gpt-5.4-mini-2026-03-17",
-        provider="openai",
+        model_id=model_id,
+        provider=provider,
         controller_commit="abc123",
         sampling={},
         budgets={},

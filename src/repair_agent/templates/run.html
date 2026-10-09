@@ -4,6 +4,10 @@
 <p class="split"><a href="/cases/{{ run.case_id }}">{{ run.case_id }}</a> · {{ run.method | method_label }} · repetition {{ run.repetition }}</p>
 <h1>Run {{ run.run_id }}</h1>
 
+{% if scripted %}
+<p class="scripted">Scripted fake model. This attempt did not call a hosted model.</p>
+{% endif %}
+
 <section class="pair">
   <article>
     <h2>Agent claim</h2>
@@ -79,7 +83,11 @@
       <dd>{% if run.source_files_changed %}{{ run.source_files_changed | join(", ") }}{% else %}none{% endif %}</dd>
     </div>
   </dl>
+  {% if scripted %}
+  <p class="meta">Model {{ run.model_id or "scripted-fake" }} · provider {{ run.provider or "fake" }} · cost not applicable</p>
+  {% else %}
   <p class="meta">Model {{ run.model_id or "unrecorded" }} · {{ run.provider or "unrecorded" }} · cost label {{ run.cost_label }}</p>
+  {% endif %}
 </section>
 
 <section>

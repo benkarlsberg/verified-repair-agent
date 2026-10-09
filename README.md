@@ -106,7 +106,7 @@ uv run repair-agent evaluate --split dev --method both --repeats 1
 uv run repair-agent evaluate --split heldout --method both --repeats 3 --allow-heldout
 ```
 
-`--model fake` runs the same controller, patch policy, and Docker evaluator with a scripted model. `x00-pass` and `x00-fail` only apply to example case X00. `abstain` finishes with an empty diff on any case.
+`--model fake` runs the same controller, patch policy, and Docker evaluator with a scripted model. The bundle records `provider: fake` and `model_id: scripted-fake`. Estimated cost is not applicable, because no hosted model was called. `x00-pass` and `x00-fail` only apply to example case X00. `abstain` finishes with an empty diff on any case.
 
 ```bash
 uv run repair-agent run --case X00 --method iterative --model fake --fake-script x00-pass --repeat 1
