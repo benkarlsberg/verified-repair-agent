@@ -21,12 +21,9 @@ Implemented:
 - `repair-agent freeze`
 - `repair-agent run`
 - `repair-agent evaluate`
-
-Not implemented yet:
-
-- replay viewer
-- publish step
-- evaluation report
+- `repair-agent publish`
+- `repair-agent report`
+- read-only replay viewer
 
 ## Quickstart
 
@@ -39,9 +36,7 @@ uv run repair-agent validate-cases --split all
 uv run repair-agent freeze --output freeze.json
 ```
 
-`pytest` covers the visible fixture suite, the patch policy, the runner, and the repair loop. The runner checks and the X00 fake-model pipeline start a container and are skipped when Docker is not available. `validate-cases` does not skip those runs: without Docker it exits 1 and says that no fixture tests were executed. Loop tests use the fake model and do not call the network.
-
-`repair-agent report` and `publish` exit 2. They are not implemented yet. The replay viewer is not implemented yet.
+`pytest` covers the visible fixture suite, the patch policy, the runner, the repair loop, publish, the report, and the viewer. The runner checks and the X00 fake-model pipeline start a container and are skipped when Docker is not available. `validate-cases` does not skip those runs: without Docker it exits 1 and says that no fixture tests were executed. Loop tests use the fake model and do not call the network. The viewer tests use FastAPI's TestClient and do not need a model key.
 
 ## Two repositories
 
@@ -120,6 +115,34 @@ uv run repair-agent run --case X00 --method iterative --model fake --fake-script
 
 Each attempt writes `runs/<run_id>/` with `result.json`, `events.jsonl`, `final.patch`, `visible_tests.txt`, `evaluator.json`, and `evaluator.txt`. `runs/` is gitignored. The evaluator runs after model access is closed, in a fresh workspace, and its output is not sent back to the model.
 
+## Publish, report, and replay
+
+`publish` copies finished bundles into a separate directory. Each export is checked against the `PublicRun` schema. Incomplete bundles are refused. The written files are scanned for host paths, key-like strings, and `evaluator_private`. A failed scan writes nothing. The export keeps the result summary, a sanitized trace, the source diff, the visible test log, and the public issue text. It does not keep evaluator logs, reference fixes, or the private evaluator hash.
+
+```bash
+uv run repair-agent publish --runs runs --output public_runs
+uv run repair-agent report --runs runs --output reports/evaluation.md
+```
+
+`public_runs/` is gitignored. Checked-in sample recordings live in `examples/public_runs/`: one passing iterative attempt and one failing one-shot attempt on example case X00, both from `--model fake`.
+
+The report reads `runs/` and writes plain markdown tables: verified repairs with the count and denominator, case coverage, false repair claims, ordinary-suite regressions, protected-suite failures, probe abstention, and efficiency. Development results are labeled as development results. The limitations section includes the D04/H02 idempotency overlap. The report does not claim statistical significance.
+
+The viewer reads only the published directory. With no `REPAIR_AGENT_PUBLIC_RUNS` and an empty `public_runs/`, it serves the example recordings. It does not read `runs/`, the private checkout, or a model key.
+
+```bash
+uv run uvicorn repair_agent.web:app --host 127.0.0.1 --port 8000
+```
+
+Routes are `/`, `/cases/{case_id}`, `/runs/{run_id}`, `/comparison`, and `/healthz`. There is no control that uploads, runs, or executes a repair.
+
+`docker/viewer.Dockerfile` builds a viewer-only image. It runs as a non-root user, has no model key, and listens on `PORT`.
+
+```bash
+docker build -f docker/viewer.Dockerfile -t verified-repair-agent-viewer .
+docker run --rm -e PORT=8000 -p 8000:8000 verified-repair-agent-viewer
+```
+
 Budgets for one attempt are 10 minutes, 12 model responses, 30 tool calls, 3 source patch submissions, a provisional cumulative cap of 160,000 input plus output tokens, and 4,000 output tokens per response. The cumulative cap is provisional until the final freeze. Measured D01 usage was about 82–84k input tokens over 8–9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached input still counts at full weight toward that token budget. The loop stops before a request whose estimated input plus the output cap would exceed the remaining tokens. When a normal tool round no longer fits and a call that allows only `finish` does, that finish-only call is the last model request. If even that call would not fit, the attempt stops as `unresolved`. A budget stop keeps the latest valid source diff and records an `unresolved` claim when `finish` was not called.
 
 ## Layout
@@ -130,12 +153,13 @@ benchmark/fixture/    correct order service and visible tests
 benchmark/cases/      D01–D08 issue text and bug patches
 benchmark/probes/     P01–P03 issue text
 benchmark/manifests/  dev.json and probes.json
-examples/             public X00 oracle
+examples/             public X00 oracle and sample replay bundles
 config/               model id, budgets, pricing, service contract
-docker/               runner image
-tests/                policy, runner, loop, and manifest checks
+docker/               runner image and viewer image
+tests/                policy, runner, loop, publish, report, and viewer checks
 docs/                 architecture and private-benchmark layout
 runs/                 local attempt bundles, gitignored
+public_runs/          sanitized replay bundles, gitignored
 ```
 
-`publish.py` and `web.py` are still stubs. See [`docs/architecture.md`](docs/architecture.md).
+See [`docs/architecture.md`](docs/architecture.md).

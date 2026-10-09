@@ -23,6 +23,12 @@ evaluator          -- fresh workspace, final source diff only
         |
         v
 run bundle         -- events.jsonl, result.json, final.patch, private evaluator files
+        |
+        v
+publish            -- PublicRun only: summary, sanitized trace, diff, visible tests
+        |
+        v
+replay viewer      -- read-only FastAPI app over public_runs
 ```
 
 The host process calls the model and Docker. It does not import the order service while it is validating a patch. A target container receives one workspace and, during evaluation, a read-only protected-test directory. It does not receive the repository, the Docker socket, reference fixes, or environment secrets.
@@ -39,4 +45,6 @@ The evaluator rebuilds the original buggy tree, applies only the net source diff
 
 Example case X00 uses the same steps with files under `examples/`. It is not part of the benchmark score.
 
-The public viewer, the publish step, and the evaluation report are not built yet. When they are, the viewer will read sanitized bundles and will not run repairs.
+`repair-agent publish` writes one `public.json` per finished attempt. The document is a `PublicRun`, not a copy of `result.json`. Evaluator logs, the evaluator hash, reference fixes, full prompts, host paths, and key-like strings are left out. A scan of the written files refuses the export if any of those remain. `repair-agent report` reads the local bundles and writes the evaluation tables. Development results stay in their own section.
+
+The viewer process loads `public_runs`, or `examples/public_runs` when that directory is empty. It does not open `runs/` or the private checkout, and it has no route that starts a model call or a container. `/healthz` returns the schema version and the number of loaded bundles.

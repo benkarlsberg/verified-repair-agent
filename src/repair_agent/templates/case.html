@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ case_id }} · Verified Repair Agent{% endblock %}
+{% block body %}
+<p class="split">{{ split }}</p>
+<h1>Case {{ case_id }}</h1>
+
+<section>
+  <h2>Issue</h2>
+  {% if issue %}
+  <pre class="prose">{{ issue }}</pre>
+  {% else %}
+  <p>The issue text was not included in this recording.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Recorded runs</h2>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Repetition</th>
+          <th>Agent claim</th>
+          <th>Evaluator verdict</th>
+          <th>Ordinary tests</th>
+          <th>Protected tests</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td>{{ run.method | method_label }}</td>
+          <td>{{ run.repetition }}</td>
+          <td>{{ run.agent_claim or "not recorded" }}</td>
+          <td>{{ run.verification or "not recorded" }}</td>
+          <td>{{ run.visible_passed | flag }}</td>
+          <td>{{ run.protected_passed | flag }}</td>
+          <td><a href="/runs/{{ run.run_id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

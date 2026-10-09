@@ -2,6 +2,7 @@
 .venv/
 private/
 runs/
+/public_runs/
 workspaces/
 __pycache__/
 .pytest_cache/

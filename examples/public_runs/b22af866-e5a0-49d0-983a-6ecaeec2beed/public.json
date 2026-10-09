@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "b22af866-e5a0-49d0-983a-6ecaeec2beed",
+  "case_id": "X00",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "failed",
+  "summary": "The cancelled status label was edited and the case is repaired.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/example_ops.py"
+  ],
+  "patch_sha256": "f0da2a4286a9bc81b8c0daefcf851cfab57899263c6d5105af7c59e808f82d49",
+  "visible_passed": true,
+  "protected_passed": false,
+  "input_tokens": 120,
+  "cached_input_tokens": 0,
+  "output_tokens": 40,
+  "reasoning_tokens": 0,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 3.574,
+  "estimated_cost_usd": 0.00027,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "fake",
+  "controller_commit": "357823e1adeb6f69e6466520e5d46b41c279f479",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "bb493c1ab279948e95462dca001cbcddee5262df3b78f4a5702d350b9d017906",
+  "manifest_sha256": "0ebedab75127ed447441dbaf20c0d27010078d97cc9baf23a8049fe4018fcbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T03:45:48Z",
+  "finished_at_utc": "2026-10-09T03:45:51Z",
+  "issue": "# EXAMPLE ONLY. This is not a benchmark case.\n\nThe display label for a cancelled order is misspelled. This case exists so the public repository can exercise the evaluator. It is not one of D01–D08 or H01–H04.\n\nExample: status \"cancelled\" should be labeled \"Cancelled\". Status \"open\" should be labeled \"Open\".\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T03:45:48Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T03:45:48Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status label was edited and the case is repaired.\\\", \\\"limitations\\\": [], \\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancellled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status label was edited and the case is repaired.\\\", \\\"limitations\\\": [], \\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancellled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\": \\\"repaired\\\", \\\"summary\\\": \\\"The cancelled status label was edited and the case is repaired.\\\", \\\"limitations\\\": [], \\\"patch\\\": \\\"diff --git a/order_service/example_ops.py b/order_service/example_ops.py\\\\n--- a/order_service/example_ops.py\\\\n+++ b/order_service/example_ops.py\\\\n@@ -6,7 +6,7 @@\\\\n \\\\n _LABELS = {\\\\n     \\\\\\\"open\\\\\\\": \\\\\\\"Open\\\\\\\",\\\\n-    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Canceled\\\\\\\",\\\\n+    \\\\\\\"cancelled\\\\\\\": \\\\\\\"Cancellled\\\\\\\",\\\\n }\\\\n \\\\n \\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T03:45:48Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/example_ops.py b/order_service/example_ops.py\n--- a/order_service/example_ops.py\n+++ b/order_service/example_ops.py\n@@ -6,7 +6,7 @@\n \n _LABELS = {\n     \"open\": \"Open\",\n-    \"cancelled\": \"Canceled\",\n+    \"cancelled\": \"Cancellled\",\n }\n \n \n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/example_ops.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T03:45:48Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T03:45:51Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": false,
+      "request_summary": "final source diff",
+      "response_summary": "verification=failed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T03:45:51Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=failed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/example_ops.py b/order_service/example_ops.py\n--- a/order_service/example_ops.py\n+++ b/order_service/example_ops.py\n@@ -6,7 +6,7 @@\n \n _LABELS = {\n     \"open\": \"Open\",\n-    \"cancelled\": \"Canceled\",\n+    \"cancelled\": \"Cancellled\",\n }\n \n \n",
+  "visible_tests": ""
+}

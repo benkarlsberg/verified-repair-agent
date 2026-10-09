@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ run.case_id }} {{ run.method | method_label }} · Verified Repair Agent{% endblock %}
+{% block body %}
+<p class="split"><a href="/cases/{{ run.case_id }}">{{ run.case_id }}</a> · {{ run.method | method_label }} · repetition {{ run.repetition }}</p>
+<h1>Run {{ run.run_id }}</h1>
+
+<section class="pair">
+  <article>
+    <h2>Agent claim</h2>
+    <p class="verdict">{{ run.agent_claim or "not recorded" }}</p>
+    <p>{{ run.summary or "The attempt recorded an empty summary." }}</p>
+  </article>
+  <article>
+    <h2>Evaluator verdict</h2>
+    <p class="verdict">{{ run.verification or "not recorded" }}</p>
+    <p>Status {{ run.status }}. {% if run.stop_reason %}Stop reason: {{ run.stop_reason }}.{% endif %}</p>
+  </article>
+</section>
+
+{% if false_claim %}
+<p class="callout">False repair claim. The agent said repaired. The evaluator recorded {{ run.verification }}.</p>
+{% endif %}
+
+{% if run.limitations %}
+<section>
+  <h2>Limitations the agent recorded</h2>
+  <ul>
+    {% for item in run.limitations %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if run.evidence %}
+<section>
+  <h2>Evidence the agent cited</h2>
+  <ul>
+    {% for item in run.evidence %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section>
+  <h2>Checks, runtime, and cost</h2>
+  <dl class="facts">
+    <div>
+      <dt>Ordinary tests</dt>
+      <dd>{{ run.visible_passed | flag }}</dd>
+    </div>
+    <div>
+      <dt>Protected tests</dt>
+      <dd>{{ run.protected_passed | flag }}</dd>
+    </div>
+    <div>
+      <dt>Elapsed</dt>
+      <dd>{{ "%.3f"|format(run.elapsed_seconds) }} seconds</dd>
+    </div>
+    <div>
+      <dt>Estimated cost</dt>
+      <dd>{{ cost }}</dd>
+    </div>
+    <div>
+      <dt>Input tokens</dt>
+      <dd>{{ run.input_tokens }}</dd>
+    </div>
+    <div>
+      <dt>Output tokens</dt>
+      <dd>{{ run.output_tokens }}</dd>
+    </div>
+    <div>
+      <dt>Tool calls</dt>
+      <dd>{{ run.tool_calls }}</dd>
+    </div>
+    <div>
+      <dt>Source files</dt>
+      <dd>{% if run.source_files_changed %}{{ run.source_files_changed | join(", ") }}{% else %}none{% endif %}</dd>
+    </div>
+  </dl>
+  <p class="meta">Model {{ run.model_id or "unrecorded" }} · {{ run.provider or "unrecorded" }} · cost label {{ run.cost_label }}</p>
+</section>
+
+<section>
+  <h2>Source diff</h2>
+  {% if run.source_diff.strip() %}
+  <pre>{{ run.source_diff }}</pre>
+  {% else %}
+  <p>The source diff is empty.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Tool timeline</h2>
+  {% if run.trace %}
+  <ol class="timeline">
+    {% for event in run.trace %}
+    <li>
+      <p class="event-meta">
+        <span>{{ event.seq }}</span>
+        <span>{{ event.category }}</span>
+        {% if event.tool_name %}<span>{{ event.tool_name }}</span>{% endif %}
+        <span>{{ "ok" if event.success else "failed" }}</span>
+        {% if event.duration_ms is not none %}<span>{{ event.duration_ms }} ms</span>{% endif %}
+      </p>
+      <p class="label">Request</p>
+      <pre>{{ event.request_summary }}</pre>
+      <p class="label">Response</p>
+      <pre>{{ event.response_summary }}</pre>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p>No trace rows were published.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Visible test summary</h2>
+  {% if run.visible_tests.strip() %}
+  <pre>{{ run.visible_tests }}</pre>
+  {% else %}
+  <p>No visible test output was recorded for this attempt.</p>
+  {% endif %}
+</section>
+{% endblock %}

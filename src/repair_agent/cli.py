@@ -1,8 +1,9 @@
 """Command line for the repair agent.
 
-``validate-cases`` and ``freeze`` do not call a model. ``run`` and ``evaluate``
-use ``OPENAI_API_KEY`` unless ``--model fake`` is set. Held-out cases are
-refused unless ``--allow-heldout`` is passed.
+``validate-cases``, ``freeze``, ``report``, and ``publish`` do not call a model.
+``run`` and ``evaluate`` use ``OPENAI_API_KEY`` unless ``--model fake`` is set.
+Held-out cases are refused unless ``--allow-heldout`` is passed. The replay
+viewer is ``repair_agent.web:app`` and does not read a model key.
 """
 
 from __future__ import annotations
@@ -24,6 +25,8 @@ from repair_agent.cases import repo_root
 from repair_agent.fake_scripts import FakeScriptError, build_fake_turns
 from repair_agent.loop import AttemptConfig, evaluate_split, run_repetitions
 from repair_agent.model import FakeModel, MissingAPIKeyError, ModelIdentityError, OpenAIModel
+from repair_agent.publish import PublishError, publish
+from repair_agent.report import ReportError, write_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,13 +51,13 @@ def main(argv: list[str] | None = None) -> int:
     evaluate.add_argument("--method", required=True, choices=("iterative", "one_shot", "both"))
     evaluate.add_argument("--repeats", type=int, default=1)
 
-    report = sub.add_parser("report", help="Write the evaluation report (not implemented yet)")
+    report = sub.add_parser("report", help="Write the evaluation report from run bundles")
     report.add_argument("--runs", default="runs")
     report.add_argument("--output", default="reports/evaluation.md")
 
-    publish = sub.add_parser("publish", help="Sanitize run bundles (not implemented yet)")
-    publish.add_argument("--runs", default="runs")
-    publish.add_argument("--output", default="public_runs")
+    publish_cmd = sub.add_parser("publish", help="Copy sanitized bundles into a public directory")
+    publish_cmd.add_argument("--runs", default="runs")
+    publish_cmd.add_argument("--output", default="public_runs")
 
     args = parser.parse_args(argv)
     try:
@@ -72,12 +75,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"fixture {fixture_sha}")
             print("private evaluator files included" if present else "private evaluator files absent")
             return 0
-        if args.command in {"report", "publish"}:
-            print(
-                f"repair-agent {args.command} is not implemented yet.",
-                file=sys.stderr,
-            )
-            return 2
+        if args.command == "report":
+            return _report(args)
+        if args.command == "publish":
+            return _publish(args)
         if args.command == "run":
             return _run(args)
         return _evaluate(args)
@@ -90,6 +91,28 @@ def main(argv: list[str] | None = None) -> int:
     except (CaseNotFound, FakeScriptError, ModelIdentityError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
+
+
+def _report(args: argparse.Namespace) -> int:
+    try:
+        write_report(_output_path(args.runs), _output_path(args.output))
+    except ReportError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(f"Wrote {args.output}")
+    return 0
+
+
+def _publish(args: argparse.Namespace) -> int:
+    try:
+        result = publish(_output_path(args.runs), _output_path(args.output))
+    except PublishError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    for run_id, reason in result.incomplete:
+        print(f"Refusing to export incomplete run {run_id}: {reason}", file=sys.stderr)
+    print(f"Published {len(result.published)} run(s) to {args.output}")
+    return 1 if result.incomplete else 0
 
 
 def _add_attempt_args(parser: argparse.ArgumentParser) -> None:

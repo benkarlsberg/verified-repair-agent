@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "demo": true,
+  "note": "Sample recordings of example case X00, produced with the scripted fake model. One iterative attempt passes verification. One one-shot attempt claims a repair and the evaluator records a failure. These are not held-out results."
+}
