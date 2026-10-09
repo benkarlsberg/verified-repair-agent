@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "ea7fd92b-b1ce-4bbe-a101-679c9ff41aef",
+  "case_id": "D01",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed the discount threshold so an exact 10,000-cent subtotal now receives the 10% discount as specified.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/pricing.py"
+  ],
+  "patch_sha256": "1f6530ca05d541e37cb00f657a2d1ff38a1c1dc887e890fc8dad9329532a4e95",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9531,
+  "cached_input_tokens": 0,
+  "output_tokens": 200,
+  "reasoning_tokens": 17,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 13.333,
+  "estimated_cost_usd": 0.00804825,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "6242037b42e01bc08f1cc51143c38c8249db8962010d53b4fb2af880ee5e7ead",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:05:19Z",
+  "finished_at_utc": "2026-10-09T02:05:33Z",
+  "issue": "# Discount missing on an exact $100.00 subtotal\n\nI expect a 10% discount once the merchandise subtotal reaches 10000 cents. The discount is 10% of the subtotal, rounded down to the nearest cent. An order whose subtotal is exactly 10000 cents comes back with a discount of 0 cents.\n\nExample: a subtotal of 9999 cents should get no discount. A subtotal of 10000 cents should get a discount of 1000 cents. A subtotal of 10001 cents should get a discount of 1000 cents.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:05:19Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:05:23Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold so an exact 10,000-cent subtotal now receives the 10% discount as specified.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -17,7 +17,7 @@\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold so an exact 10,000-cent subtotal now receives the 10% discount as specified.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -17,7 +17,7 @@\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold so an exact 10,000-cent subtotal now receives the 10% discount as specified.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -17,7 +17,7 @@\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:05:23Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/pricing.py b/order_service/pricing.py\n--- a/order_service/pricing.py\n+++ b/order_service/pricing.py\n@@ -17,7 +17,7 @@\n def discount_cents(subtotal: object) -> int:\n     \"\"\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\"\"\"\n     amount = validate_cents(subtotal, name=\"subtotal\")\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\n         return amount // 10\n     return 0\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/pricing.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:05:23Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:05:33Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:05:33Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/pricing.py b/order_service/pricing.py\n--- a/order_service/pricing.py\n+++ b/order_service/pricing.py\n@@ -20,7 +20,7 @@\n def discount_cents(subtotal: object) -> int:\n     \"\"\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\"\"\"\n     amount = validate_cents(subtotal, name=\"subtotal\")\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\n         return amount // 10\n     return 0\n \n",
+  "visible_tests": ""
+}

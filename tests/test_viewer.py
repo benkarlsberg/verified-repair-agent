@@ -3,21 +3,45 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from repair_agent.cases import repo_root
+from repair_agent.measures import DEV_CASES, HELD_OUT_CASES, PROBE_CASES
+from repair_agent.publish import scan_text, scan_tree
 from repair_agent.schemas import PublicRun
-from repair_agent.web import RECORDED_LINE, create_app, resolve_public_dir
+from repair_agent.web import RECORDED_LINE, create_app, resolve_public_dir, resolve_public_dirs
 
 EXAMPLES = repo_root() / "examples" / "public_runs"
+DEV_RUNS = repo_root() / "examples" / "dev_runs"
+CHECKED_IN = (EXAMPLES, DEV_RUNS)
+_HELDOUT_ID = re.compile(r"\bH0[1-4]\b")
+_HELDOUT_PATH = re.compile(r"(?:cases|tests|reference_fixes)/H0[1-4]|manifests/heldout", re.IGNORECASE)
 
 
 def test_checked_in_examples_pass_the_leak_scan() -> None:
-    from repair_agent.publish import scan_tree
+    for directory in CHECKED_IN:
+        assert scan_tree(directory) == []
 
-    assert scan_tree(EXAMPLES) == []
+
+def test_checked_in_bundles_exclude_private_and_heldout_content() -> None:
+    bundles = [path for root in CHECKED_IN for path in sorted(root.glob("*/public.json"))]
+    assert len(bundles) == 18
+    for path in bundles:
+        text = path.read_text(encoding="utf-8")
+        assert scan_text(text) == [], path.name
+        run = PublicRun.model_validate_json(text)
+        assert run.case_id not in HELD_OUT_CASES
+        issue = _public_issue(run.case_id)
+        assert run.issue == issue
+        assert heldout_case_content(text, public_issue=issue) == []
+    assert heldout_case_content('{"case_id": "H02"}') == ["held-out case id"]
+    assert heldout_case_content("copied cases/H03/issue.md") == ["held-out path", "held-out case id"]
+    assert heldout_case_content("It is not one of D01–D08 or H01–H04.\n") == []
+    leaked = "sk-proj-abcdefghijklmnopqrstuvwxyz /home/ada/secret evaluator_private/tests/D01"
+    assert set(scan_text(leaked)) == {"key-like string", "path", "evaluator_private"}
 
 
 def test_routes_render_example_bundles() -> None:
@@ -25,7 +49,8 @@ def test_routes_render_example_bundles() -> None:
     index = client.get("/")
     assert index.status_code == 200
     assert RECORDED_LINE in index.text
-    assert "Recorded demo" in index.text
+    assert "Recorded runs" in index.text
+    assert "Recorded demo" not in index.text
     assert "X00" in index.text
     assert "passed" in index.text
     assert "failed" in index.text
@@ -125,8 +150,21 @@ def test_resolve_uses_examples_and_ignores_raw_runs(tmp_path: Path, monkeypatch)
     (demo / "public.json").write_text("{}\n", encoding="utf-8")
     monkeypatch.delenv("REPAIR_AGENT_PUBLIC_RUNS", raising=False)
     assert resolve_public_dir(tmp_path) == tmp_path / "examples" / "public_runs"
+    assert resolve_public_dirs(tmp_path) == [tmp_path / "examples" / "public_runs"]
+    dev = tmp_path / "examples" / "dev_runs" / "sample"
+    dev.mkdir(parents=True)
+    (dev / "public.json").write_text("{}\n", encoding="utf-8")
+    assert resolve_public_dirs(tmp_path) == [
+        tmp_path / "examples" / "public_runs",
+        tmp_path / "examples" / "dev_runs",
+    ]
+    published = tmp_path / "public_runs" / "local"
+    published.mkdir()
+    (published / "public.json").write_text("{}\n", encoding="utf-8")
+    assert resolve_public_dirs(tmp_path) == [tmp_path / "public_runs"]
     monkeypatch.setenv("REPAIR_AGENT_PUBLIC_RUNS", str(tmp_path / "public_runs"))
     assert resolve_public_dir(tmp_path) == tmp_path / "public_runs"
+    assert resolve_public_dirs(tmp_path) == [tmp_path / "public_runs"]
 
 
 def test_scripted_run_page_does_not_invent_a_dollar_cost(tmp_path: Path) -> None:
@@ -163,11 +201,71 @@ def test_scripted_run_page_does_not_invent_a_dollar_cost(tmp_path: Path) -> None
     assert "$" not in page.text
 
 
+def test_default_catalog_serves_development_runs_and_x00(monkeypatch) -> None:
+    monkeypatch.delenv("REPAIR_AGENT_PUBLIC_RUNS", raising=False)
+    client = TestClient(create_app())
+    health = client.get("/healthz")
+    assert health.status_code == 200
+    assert health.json() == {"status": "ok", "schema_version": 1, "bundles": 18}
+    index = client.get("/")
+    assert "Recorded runs" in index.text
+    assert "D01" in index.text
+    assert "X00" in index.text
+    assert "scripted-fake" in index.text
+    runs = [run for directory in CHECKED_IN for run in _load(directory)]
+    d01 = next(item for item in runs if item.case_id == "D01" and item.method == "iterative")
+    page = client.get(f"/runs/{d01.run_id}")
+    assert page.status_code == 200
+    assert "Scripted fake model" not in page.text
+    assert "gpt-5.4-mini-2026-03-17" in page.text
+    assert 'class="verdict">passed<' in page.text
+    x00 = next(item for item in runs if item.case_id == "X00")
+    fake = client.get(f"/runs/{x00.run_id}")
+    assert "Scripted fake model. This attempt did not call a hosted model." in fake.text
+    comparison = client.get("/comparison")
+    assert comparison.status_code == 200
+    assert "Development results" in comparison.text
+    assert "D01" in comparison.text
+
+
 def test_app_starts_without_a_model_key(monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     client = TestClient(create_app(EXAMPLES))
     response = client.get("/healthz")
     assert response.status_code == 200
+
+
+def heldout_case_content(text: str, *, public_issue: str = "") -> list[str]:
+    """Held-out case ids and paths. The public X00 range mention is not case content."""
+    findings: list[str] = []
+    if _HELDOUT_PATH.search(text):
+        findings.append("held-out path")
+    remainder = text.replace(public_issue, "") if public_issue else text
+    for phrase in ("H01–H04", "H01-H04"):
+        remainder = remainder.replace(phrase, "")
+    if _HELDOUT_ID.search(remainder):
+        findings.append("held-out case id")
+    return findings
+
+
+def _public_issue(case_id: str) -> str:
+    root = repo_root()
+    if case_id == "X00":
+        path = root / "examples" / "cases" / "X00" / "issue.md"
+    elif case_id in DEV_CASES:
+        path = root / "benchmark" / "cases" / case_id / "issue.md"
+    elif case_id in PROBE_CASES:
+        path = root / "benchmark" / "probes" / case_id / "issue.md"
+    else:
+        raise AssertionError(f"no public issue for {case_id}")
+    return path.read_text(encoding="utf-8")
+
+
+def _load(directory: Path) -> list[PublicRun]:
+    runs: list[PublicRun] = []
+    for path in sorted(directory.glob("*/public.json")):
+        runs.append(PublicRun.model_validate_json(path.read_text(encoding="utf-8")))
+    return runs
 
 
 def _write(directory: Path, run_id: str) -> None:

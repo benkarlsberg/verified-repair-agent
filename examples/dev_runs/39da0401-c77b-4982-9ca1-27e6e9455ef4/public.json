@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "39da0401-c77b-4982-9ca1-27e6e9455ef4",
+  "case_id": "D05",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed merchandise total calculation so each line contributes unit price times quantity instead of unit price alone.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/pricing.py"
+  ],
+  "patch_sha256": "5c3bb2aa666c3c5026f7e00e719b21d4c043522c3bcfa2c9ba5093afc6cdfaff",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9499,
+  "cached_input_tokens": 0,
+  "output_tokens": 218,
+  "reasoning_tokens": 30,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 10.575,
+  "estimated_cost_usd": 0.00810525,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "4720c571f4248dcb4dd642624612717570e06e1e4150a01e73705a5daf5c0a2c",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:07:49Z",
+  "finished_at_utc": "2026-10-09T02:08:00Z",
+  "issue": "# The merchandise total ignores quantity\n\nEach line should contribute its unit price times its quantity. A line is being charged the unit price once, no matter how many units it contains. This total is merchandise only. It does not include shipping or discounts.\n\nExample: two mugs priced at 1200 cents each should total 2400 cents. One mug still totals 1200 cents. An empty cart should be rejected.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:07:49Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:07:51Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed merchandise total calculation so each line contributes unit price times quantity instead of unit price alone.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -46,7 +46,7 @@ def order_total(items: object) -> int:\\\\n     for item in items:\\\\n         if not isinstance(item, Mapping):\\\\n             raise ValidationError(\\\\\\\"each item must include unit_price_cents and quantity\\\\\\\")\\\\n         price = validate_cents(item.get(\\\\\\\"unit_price_cents\\\\\\\"), name=\\\\\\\"unit_price_cents\\\\\\\")\\\\n         quantity = validate_quantity(item.get(\\\\\\\"quantity\\\\\\\"))\\\\n-        total += price\\\\n+        total += price * quantity\\\\n     return total\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed merchandise total calculation so each line contributes unit price times quantity instead of unit price alone.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -46,7 +46,7 @@ def order_total(items: object) -> int:\\\\n     for item in items:\\\\n         if not isinstance(item, Mapping):\\\\n             raise ValidationError(\\\\\\\"each item must include unit_price_cents and quantity\\\\\\\")\\\\n         price = validate_cents(item.get(\\\\\\\"unit_price_cents\\\\\\\"), name=\\\\\\\"unit_price_cents\\\\\\\")\\\\n         quantity = validate_quantity(item.get(\\\\\\\"quantity\\\\\\\"))\\\\n-        total += price\\\\n+        total += price * quantity\\\\n     return total\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed merchandise total calculation so each line contributes unit price times quantity instead of unit price alone.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -46,7 +46,7 @@ def order_total(items: object) -> int:\\\\n     for item in items:\\\\n         if not isinstance(item, Mapping):\\\\n             raise ValidationError(\\\\\\\"each item must include unit_price_cents and quantity\\\\\\\")\\\\n         price = validate_cents(item.get(\\\\\\\"unit_price_cents\\\\\\\"), name=\\\\\\\"unit_price_cents\\\\\\\")\\\\n         quantity = validate_quantity(item.get(\\\\\\\"quantity\\\\\\\"))\\\\n-        total += price\\\\n+        total += price * quantity\\\\n     return total\\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:07:51Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/pricing.py b/order_service/pricing.py\n--- a/order_service/pricing.py\n+++ b/order_service/pricing.py\n@@ -46,7 +46,7 @@ def order_total(items: object) -> int:\n     for item in items:\n         if not isinstance(item, Mapping):\n             raise ValidationError(\"each item must include unit_price_cents and quantity\")\n         price = validate_cents(item.get(\"unit_price_cents\"), name=\"unit_price_cents\")\n         quantity = validate_quantity(item.get(\"quantity\"))\n-        total += price\n+        total += price * quantity\n     return total\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/pricing.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:07:51Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:08:00Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:08:00Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/pricing.py b/order_service/pricing.py\n--- a/order_service/pricing.py\n+++ b/order_service/pricing.py\n@@ -51,7 +51,7 @@\n             raise ValidationError(\"each item must include unit_price_cents and quantity\")\n         price = validate_cents(item.get(\"unit_price_cents\"), name=\"unit_price_cents\")\n         quantity = validate_quantity(item.get(\"quantity\"))\n-        total += price\n+        total += price * quantity\n     return total\n \n \n",
+  "visible_tests": ""
+}

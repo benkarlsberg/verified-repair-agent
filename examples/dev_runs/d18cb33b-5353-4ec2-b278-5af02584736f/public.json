@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "d18cb33b-5353-4ec2-b278-5af02584736f",
+  "case_id": "D02",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Tightened quantity validation so 0 is rejected and the accepted range is strictly 1 through 100, while still rejecting booleans and non-integers.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/validation.py"
+  ],
+  "patch_sha256": "9d56834634f4a3ab0f7844320837c3c02d1ad980bb8a31ee5c3c3c1ac14f58c2",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9504,
+  "cached_input_tokens": 0,
+  "output_tokens": 266,
+  "reasoning_tokens": 48,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 11.78,
+  "estimated_cost_usd": 0.008325,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "22ff5724cf98d197fbd51e7888e49aba608106b2fda70e0eae8c9910d9d59631",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:06:26Z",
+  "finished_at_utc": "2026-10-09T02:06:38Z",
+  "issue": "# A quantity of zero is accepted\n\nQuantities have to be whole numbers from 1 through 100. Zero, negative numbers, booleans, and values that are not integers should be rejected. A line with quantity 0 is currently accepted.\n\nExample: quantity 1 and quantity 20 are valid. Quantity 0, -1, true, 1.5, and the text \"2\" should all be rejected.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:06:26Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:06:28Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Tightened quantity validation so 0 is rejected and the accepted range is strictly 1 through 100, while still rejecting booleans and non-integers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,8 +9,8 @@\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Tightened quantity validation so 0 is rejected and the accepted range is strictly 1 through 100, while still rejecting booleans and non-integers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,8 +9,8 @@\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Tightened quantity validation so 0 is rejected and the accepted range is strictly 1 through 100, while still rejecting booleans and non-integers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,8 +9,8 @@\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:06:28Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/validation.py b/order_service/validation.py\n--- a/order_service/validation.py\n+++ b/order_service/validation.py\n@@ -9,8 +9,8 @@\n def validate_quantity(value: object) -> int:\n     \"\"\"Accept an integer from 1 through 100. Booleans are rejected.\"\"\"\n     if isinstance(value, bool) or not isinstance(value, int):\n         raise ValidationError(\"quantity must be an integer\")\n-    if not 0 <= value <= MAX_QUANTITY:\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\n         raise ValidationError(\"quantity must be from 1 through 100\")\n     return value\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/validation.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:06:28Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:06:38Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:06:38Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/validation.py b/order_service/validation.py\n--- a/order_service/validation.py\n+++ b/order_service/validation.py\n@@ -12,7 +12,7 @@\n     \"\"\"Accept an integer from 1 through 100. Booleans are rejected.\"\"\"\n     if isinstance(value, bool) or not isinstance(value, int):\n         raise ValidationError(\"quantity must be an integer\")\n-    if not 0 <= value <= MAX_QUANTITY:\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\n         raise ValidationError(\"quantity must be from 1 through 100\")\n     return value\n \n",
+  "visible_tests": ""
+}

@@ -20,6 +20,7 @@ COPY src/repair_agent/__init__.py src/repair_agent/py.typed src/repair_agent/sch
 COPY src/repair_agent/templates src/repair_agent/templates
 COPY src/repair_agent/static src/repair_agent/static
 COPY examples/public_runs /app/public_runs
+COPY examples/dev_runs /app/public_runs
 
 RUN uv export --frozen --no-dev --no-emit-project -o /tmp/requirements.txt \
     && uv pip install --system --no-cache -r /tmp/requirements.txt \

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "run_id": "1a17c72c-ccba-49d4-8729-1c55b0cedeb9",
+  "case_id": "D01",
+  "method": "iterative",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed the discount threshold comparison so a subtotal of exactly 10,000 cents now receives a 10% discount. Added a reproduction test demonstrating the bug, which failed before the change and passed after it. The visible suite also passes.",
+  "limitations": [
+    "Only the pricing threshold defect was changed; no other behavior was modified.",
+    "One deprecation warning remains in the test environment, unrelated to the defect."
+  ],
+  "evidence": [
+    "agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold failed before the patch with discount_cents(10000) == 0",
+    "order_service/pricing.py now uses amount >= DISCOUNT_THRESHOLD_CENTS in discount_cents",
+    "Visible tests passed after the fix: 68 passed"
+  ],
+  "source_files_changed": [
+    "order_service/pricing.py"
+  ],
+  "patch_sha256": "1f6530ca05d541e37cb00f657a2d1ff38a1c1dc887e890fc8dad9329532a4e95",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 63551,
+  "cached_input_tokens": 51200,
+  "output_tokens": 627,
+  "reasoning_tokens": 105,
+  "tool_calls": 6,
+  "patch_attempts": 1,
+  "elapsed_seconds": 25.679,
+  "estimated_cost_usd": 0.01592475,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "1bd12a98bc0cde5d0c43e490e2e3beeadd81a0eb61699572cb04859b58d8f989",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": true,
+  "reproduction_passed_after_patch": true,
+  "stop_reason": "finish",
+  "started_at_utc": "2026-10-09T02:05:33Z",
+  "finished_at_utc": "2026-10-09T02:05:58Z",
+  "issue": "# Discount missing on an exact $100.00 subtotal\n\nI expect a 10% discount once the merchandise subtotal reaches 10000 cents. The discount is 10% of the subtotal, rounded down to the nearest cent. An order whose subtotal is exactly 10000 cents comes back with a discount of 0 cents.\n\nExample: a subtotal of 9999 cents should get no discount. A subtotal of 10000 cents should get a discount of 1000 cents. A subtotal of 10001 cents should get a discount of 1000 cents.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:05:33Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:05:35Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"function_call\", \"call_id\": \"call_plsxipOj2uvfluvXBiAMyQfk\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_plsxipOj2uvfluvXBiAMyQfk\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:05:38Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"...................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n67 passed, 1 warning in 0.36s\"}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:05:39Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "5 items; last={\"type\": \"function_call\", \"call_id\": \"call_nn2Vx1CtH28IaRvL0wakMkoW\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_discount_threshold.py b/agent_tests/test_discount_threshold.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_discount_threshold.py\\\\n@@ -0,0 +1,9 @@\\\\n+from order_service.pricing import discount_cents\\\\n+\\\\n+\\\\n+def test_discount_applies_at_exact_threshold() -> None:\\\\n+    assert discount_cents(9_999) == 0\\\\n+    assert discount_cents(10_000) == 1_000\\\\n+    assert discount_cents(10_001) == 1_000\\\\n+\\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_discount_threshold.py b/agent_tests/test_discount_threshold.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_discount_threshold.py\\\\n@@ -0,0 +1,9 @@\\\\n+from order_service.pricing import discount_cents\\\\n+\\\\n+\\\\n+def test_discount_applies_at_exact_threshold() -> None:\\\\n+    assert discount_cents(9_999) == 0\\\\n+    assert discount_cents(10_000) == 1_000\\\\n+    assert discount_cents(10_001) == 1_000\\\\n+\\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_nn2Vx1CtH28IaRvL0wakMkoW\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_discount_threshold.py b/agent_tests/test_discount_threshold.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_discount_threshold.py\\\\n@@ -0,0 +1,9 @@\\\\n+from order_service.pricing import discount_cents\\\\n+\\\\n+\\\\n+def test_discount_applies_at_exact_threshold() -> None:\\\\n+    assert discount_cents(9_999) == 0\\\\n+    assert discount_cents(10_000) == 1_000\\\\n+    assert discount_cents(10_001) == 1_000\\\\n+\\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:05:39Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\": \"diff --git a/agent_tests/test_discount_threshold.py b/agent_tests/test_discount_threshold.py\\nnew file mode 100644\\n--- dev/null\\n+++ b/agent_tests/test_discount_threshold.py\\n@@ -0,0 +1,9 @@\\n+from order_service.pricing import discount_cents\\n+\\n+\\n+def test_discount_applies_at_exact_threshold() -> None:\\n+    assert discount_cents(9_999) == 0\\n+    assert discount_cents(10_000) == 1_000\\n+    assert discount_cents(10_001) == 1_000\\n+\\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"agent_tests/test_discount_threshold.py\"], \"source\": false}"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:05:40Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "7 items; last={\"type\": \"function_call\", \"call_id\": \"call_kxfTiAuKChVZo4TgE56rrvEJ\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_kxfTiAuKChVZo4TgE56rrvEJ\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 7,
+      "timestamp_utc": "2026-10-09T02:05:43Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": false,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": false, \"exit_code\": 1, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"...................................................................F\\n=================================== FAILURES ===================================\\n___________________ test_discount_applies_at_exact_threshold ___________________\\nagent_tests/test_discount_threshold.py:6: in test_discount_applies_at_exact_threshold\\n    assert discount_cents(10_000) == 1_000\\nE   assert 0 == 1000\\nE    +  where 0 = discount_cents(10000)\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n=========================== short test summary info ============================\\nFAILED agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold\\n1 failed, 67 passed, 1 warning in 0.37s\"}"
+    },
+    {
+      "seq": 8,
+      "timestamp_utc": "2026-10-09T02:05:44Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "9 items; last={\"type\": \"function_call\", \"call_id\": \"call_pAxGkdWSNxpiWqzwanRR282C\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -19,7 +19,7 @@ SHIPPING_FEE_CENTS = 500\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -19,7 +19,7 @@ SHIPPING_FEE_CENTS = 500\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_pAxGkdWSNxpiWqzwanRR282C\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\\\n--- a/order_service/pricing.py\\\\n+++ b/order_service/pricing.py\\\\n@@ -19,7 +19,7 @@ SHIPPING_FEE_CENTS = 500\\\\n def discount_cents(subtotal: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     amount = validate_cents(subtotal, name=\\\\\\\"subtotal\\\\\\\")\\\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\\\n         return amount // 10\\\\n     return 0\\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 9,
+      "timestamp_utc": "2026-10-09T02:05:44Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\":\"diff --git a/order_service/pricing.py b/order_service/pricing.py\\n--- a/order_service/pricing.py\\n+++ b/order_service/pricing.py\\n@@ -19,7 +19,7 @@ SHIPPING_FEE_CENTS = 500\\n def discount_cents(subtotal: object) -> int:\\n     \\\"\\\"\\\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\\\"\\\"\\\"\\n     amount = validate_cents(subtotal, name=\\\"subtotal\\\")\\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\\n         return amount // 10\\n     return 0\\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/pricing.py\"], \"source\": true}"
+    },
+    {
+      "seq": 10,
+      "timestamp_utc": "2026-10-09T02:05:45Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "11 items; last={\"type\": \"function_call\", \"call_id\": \"call_cGjaEN5Z7jsaMwI1juSWJt2f\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_cGjaEN5Z7jsaMwI1juSWJt2f\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 11,
+      "timestamp_utc": "2026-10-09T02:05:47Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"....................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n68 passed, 1 warning in 0.36s\"}"
+    },
+    {
+      "seq": 12,
+      "timestamp_utc": "2026-10-09T02:05:49Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "13 items; last={\"type\": \"function_call\", \"call_id\": \"call_eFfHVawcGDxpO5Yl7382RRSN\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold comparison so a subtotal of exactly 10,000 cents now receives a 10% discount. Added a reproduction test demonstrating the bug, which failed before the change and passed after it. The visible suite also passes.\\\",\\\"evidence\\\":[\\\"agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold failed before the patch with discount_cents(10000) == 0\\\",\\\"order_service/pricing.py now uses amount >= DISCOUNT_THRESHOLD_CENTS in discount_cents\\\",\\\"Visible tests passed after the fix: 68 passed\\\"],\\\"limitations\\\":[\\\"Only the pricing threshold defect was changed; no other behavior was modified.\\\",\\\"One deprecation warning remains in the test environment, unrelated to the defect.\\\"]}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold comparison so a subtotal of exactly 10,000 cents now receives a 10% discount. Added a reproduction test demonstrating the bug, which failed before the change and passed after it. The visible suite also passes.\\\",\\\"evidence\\\":[\\\"agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold failed before the patch with discount_cents(10000) == 0\\\",\\\"order_service/pricing.py now uses amount >= DISCOUNT_THRESHOLD_CENTS in discount_cents\\\",\\\"Visible tests passed after the fix: 68 passed\\\"],\\\"limitations\\\":[\\\"Only the pricing threshold defect was changed; no other behavior was modified.\\\",\\\"One deprecation warning remains in the test environment, unrelated to the defect.\\\"]}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_eFfHVawcGDxpO5Yl7382RRSN\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed the discount threshold comparison so a subtotal of exactly 10,000 cents now receives a 10% discount. Added a reproduction test demonstrating the bug, which failed before the change and passed after it. The visible suite also passes.\\\",\\\"evidence\\\":[\\\"agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold failed before the patch with discount_cents(10000) == 0\\\",\\\"order_service/pricing.py now uses amount >= DISCOUNT_THRESHOLD_CENTS in discount_cents\\\",\\\"Visible tests passed after the fix: 68 passed\\\"],\\\"limitations\\\":[\\\"Only the pricing threshold defect was changed; no other behavior was modified.\\\",\\\"One deprecation warning remains in the test environment, unrelated to the defect.\\\"]}\"}]}"
+    },
+    {
+      "seq": 13,
+      "timestamp_utc": "2026-10-09T02:05:49Z",
+      "category": "tool",
+      "tool_name": "finish",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"claim\":\"repaired\",\"summary\":\"Fixed the discount threshold comparison so a subtotal of exactly 10,000 cents now receives a 10% discount. Added a reproduction test demonstrating the bug, which failed before the change and passed after it. The visible suite also passes.\",\"evidence\":[\"agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold failed before the patch with discount_cents(10000) == 0\",\"order_service/pricing.py now uses amount >= DISCOUNT_THRESHOLD_CENTS in discount_cents\",\"Visible tests passed after the fix: 68 passed\"],\"limitations\":[\"Only the pricing threshold defect was changed; no other behavior was modified.\",\"One deprecation warning remains in the test environment, unrelated to the defect.\"]}",
+      "response_summary": "{\"ok\": true, \"claim\": \"repaired\", \"stopped\": true}"
+    },
+    {
+      "seq": 14,
+      "timestamp_utc": "2026-10-09T02:05:49Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 15,
+      "timestamp_utc": "2026-10-09T02:05:58Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 16,
+      "timestamp_utc": "2026-10-09T02:05:58Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=finish"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/pricing.py b/order_service/pricing.py\n--- a/order_service/pricing.py\n+++ b/order_service/pricing.py\n@@ -20,7 +20,7 @@\n def discount_cents(subtotal: object) -> int:\n     \"\"\"Return 10% of subtotal, rounded down, once subtotal reaches 10000 cents.\"\"\"\n     amount = validate_cents(subtotal, name=\"subtotal\")\n-    if amount > DISCOUNT_THRESHOLD_CENTS:\n+    if amount >= DISCOUNT_THRESHOLD_CENTS:\n         return amount // 10\n     return 0\n \n",
+  "visible_tests": "...................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n67 passed, 1 warning in 0.36s\n\n...................................................................F\n=================================== FAILURES ===================================\n___________________ test_discount_applies_at_exact_threshold ___________________\nagent_tests/test_discount_threshold.py:6: in test_discount_applies_at_exact_threshold\n    assert discount_cents(10_000) == 1_000\nE   assert 0 == 1000\nE    +  where 0 = discount_cents(10000)\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED agent_tests/test_discount_threshold.py::test_discount_applies_at_exact_threshold\n1 failed, 67 passed, 1 warning in 0.37s\n\n....................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n68 passed, 1 warning in 0.36s\n"
+}

@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "a4c7b1ac-8313-4f9d-a99c-a2d45794e698",
+  "case_id": "D06",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Made stock reservation atomic in order_service/inventory.py by checking every requested product balance before mutating any stock counts. This prevents partial decrements when a later item is out of stock.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/inventory.py"
+  ],
+  "patch_sha256": "8dea532b5986a44c17f971263687c92009f7de1c46d19618c20bbfea89f08ff9",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9511,
+  "cached_input_tokens": 0,
+  "output_tokens": 612,
+  "reasoning_tokens": 36,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 11.814,
+  "estimated_cost_usd": 0.00988725,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "3905f547d7c47eccb9f0db11534f2f6e58a7a79ed525b30f50bf8e9c2e234b89",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:08:48Z",
+  "finished_at_utc": "2026-10-09T02:09:00Z",
+  "issue": "# A failed reservation reduces stock anyway\n\nReserving several products should be all or nothing. If a later product is out of stock, every stock count should stay as it was. Right now the earlier products are reduced even though the reservation fails.\n\nExample: the warehouse has 2 mugs and 0 lamps. Reserving 1 mug and 1 lamp should fail, and the mug count should still be 2. A reservation that fits, including one that uses the exact number in stock, should decrement each product.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:08:48Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:08:51Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Made stock reservation atomic in order_service/inventory.py by checking every requested product balance before mutating any stock counts. This prevents partial decrements when a later item is out of stock.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/inventory.py b/order_service/inventory.py\\\\n--- a/order_service/inventory.py\\\\n+++ b/order_service/inventory.py\\\\n@@ -1,31 +1,33 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Atomic stock reservation.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping, MutableMapping, Sequence\\\\n \\\\n from .errors import InventoryError, ValidationError\\\\n from .validation import validate_quantity\\\\n \\\\n \\\\n def reserve_stock(stock: MutableMapping[str, int], items: Sequence[Mapping[str, object]]) -> None:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Aggregate by product, check every balance, then decrement.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if not isinstance(stock, MutableMapping):\\\\n         raise ValidationError(\\\\\\\"stock must be a mapping\\\\\\\")\\\\n     needed = _aggregate(items)\\\\n+    for product_id, quantity in needed.items():\\\\n+        _require_available(stock, product_id, quantity)\\\\n     for product_id, quantity in needed.items():\\\\n-        _require_available(stock, product_id, quantity)\\\\n         stock[product_id] -= quantity\\\\n \\\\n \\\\n def _aggregate(items: Sequence[Mapping[str, object]]) -> dict[str, int]:\\\\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence) or len(items) == 0:\\\\n         raise ValidationError(\\\\\\\"items must be a nonempty list\\\\\\\")\\\\n     needed: dict[str, int] = {}\\\\n     for item in items:\\\\n         if not isinstance(item, Mapping):\\\\n             raise ValidationError(\\\\\\\"each item must include product_id and quantity\\\\\\\")\\\\n         product_id = item.get(\\\\\\\"product_id\\\\\\\")\\\\n         if not isinstance(product_id, str) or not product_id:\\\\n             raise ValidationError(\\\\\\\"product_id must be a nonempty string\\\\\\\")\\\\n         quantity = validate_quantity(item.get(\\\\\\\"quantity\\\\\\\"))\\\\n         needed[product_id] = needed.get(product_id, 0) + quantity\\\\n     for quantity in needed.values():\\\\n         validate_quantity(quantity)\\\\n     return needed\\\\n \\\\n \\\\n def _require_available(stock: Mapping[str, int], product_id: str, quantity: int) -> None:\\\\n     available = stock.get(product_id)\\\\n     if isinstance(available, bool) or not isinstance(available, int) or available < quantity:\\\\n         raise InventoryError(f\\\\\\\"insufficient stock for {product_id}\\\\\\\")\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Made stock reservation atomic in order_service/inventory.py by checking every requested product balance before mutating any stock counts. This prevents partial decrements when a later item is out of stock.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/inventory.py b/order_service/inventory.py\\\\n--- a/order_service/inventory.py\\\\n+++ b/order_service/inventory.py\\\\n@@ -1,31 +1,33 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Atomic stock reservation.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping, MutableMapping, Sequence\\\\n \\\\n from .errors import InventoryError, ValidationError\\\\n from .validation import validate_quantity\\\\n \\\\n \\\\n def reserve_stock(stock: MutableMapping[str, int], items: Sequence[Mapping[str, object]]) -> None:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Aggregate by product, check every balance, then decrement.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if not isinstance(stock, MutableMapping):\\\\n         raise ValidationError(\\\\\\\"stock must be a mapping\\\\\\\")\\\\n     needed = _aggregate(items)\\\\n+    for product_id, quantity in needed.items():\\\\n+        _require_available(stock, product_id, quantity)\\\\n     for product_id, quantity in needed.items():\\\\n-        _require_available(stock, product_id, quantity)\\\\n         stock[product_id] -= quantity\\\\n \\\\n \\\\n def _aggregate(items: Sequence[Mapping[str, object]]) -> dict[str, int]:\\\\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence) or len(items) == 0:\\\\n         raise ValidationError(\\\\\\\"items must be a nonempty list\\\\\\\")\\\\n     needed: dict[str, int] = {}\\\\n     for item in items:\\\\n         if not isinstance(item, Mapping):\\\\n             raise ValidationError(\\\\\\\"each item must include product_id and quantity\\\\\\\")\\\\n         product_id = item.get(\\\\\\\"product_id\\\\\\\")\\\\n         if not isinstance(product_id, str) or not product_id:\\\\n             raise ValidationError(\\\\\\\"product_id must be a nonempty string\\\\\\\")\\\\n         quantity = validate_quantity(item.get(\\\\\\\"quantity\\\\\\\"))\\\\n         needed[product_id] = needed.get(product_id, 0) + quantity\\\\n     for quantity in needed.values():\\\\n         validate_quantity(quantity)\\\\n     return needed\\\\n \\\\n \\\\n def _require_available(stock: Mapping[str, int], product_id: str, quantity: int) -> None:\\\\n     available = stock.get(product_id)\\\\n     if isinstance(available, bool) or not isinstance(available, int) or available < quantity:\\\\n         raise InventoryError(f\\\\\\\"insufficient stock for {product_id}\\\\\\\")\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Made stock reservation atomic in order_service/inventory.py by checking every requested product balance before mutating any stock counts. This prevents partial decrements when a later item is out of stock.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/inventory.py b/order_service/inventory.py\\\\n--- a/order_service/inventory.py\\\\n+++ b/order_service/inventory.py\\\\n@@ -1,31 +1,33 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Atomic stock reservation.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping, MutableMapping, Sequence\\\\n \\\\n from .errors import InventoryError, ValidationError\\\\n from .validation import validate_quantity\\\\n \\\\n \\\\n def reserve_stock(stock: MutableMapping[str, int], items: Sequence[Mapping[str, object]]) -> None:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Aggregate by product, check every balance, then decrement.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if not isinstance(stock, MutableMapping):\\\\n         raise ValidationError(\\\\\\\"stock must be a mapping\\\\\\\")\\\\n     needed = _aggregate(items)\\\\n+    for product_id, quantity in needed.items():\\\\n+        _require_available(stock, product_id, quantity)\\\\n     for product_id, quantity in needed.items():\\\\n-        _require_available(stock, product_id, quantity)\\\\n         stock[product_id] -= quantity\\\\n \\\\n \\\\n def _aggregate(items: \n[truncated]"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:08:51Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/inventory.py b/order_service/inventory.py\n--- a/order_service/inventory.py\n+++ b/order_service/inventory.py\n@@ -1,31 +1,33 @@\n \"\"\"Atomic stock reservation.\"\"\"\n \n from __future__ import annotations\n \n from collections.abc import Mapping, MutableMapping, Sequence\n \n from .errors import InventoryError, ValidationError\n from .validation import validate_quantity\n \n \n def reserve_stock(stock: MutableMapping[str, int], items: Sequence[Mapping[str, object]]) -> None:\n     \"\"\"Aggregate by product, check every balance, then decrement.\"\"\"\n     if not isinstance(stock, MutableMapping):\n         raise ValidationError(\"stock must be a mapping\")\n     needed = _aggregate(items)\n+    for product_id, quantity in needed.items():\n+        _require_available(stock, product_id, quantity)\n     for product_id, quantity in needed.items():\n-        _require_available(stock, product_id, quantity)\n         stock[product_id] -= quantity\n \n \n def _aggregate(items: Sequence[Mapping[str, object]]) -> dict[str, int]:\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence) or len(items) == 0:\n         raise ValidationError(\"items must be a nonempty list\")\n     needed: dict[str, int] = {}\n     for item in items:\n         if not isinstance(item, Mapping):\n             raise ValidationError(\"each item must include product_id and quantity\")\n         product_id = item.get(\"product_id\")\n         if not isinstance(product_id, str) or not product_id:\n             raise ValidationError(\"product_id must be a nonempty string\")\n         quantity = validate_quantity(item.get(\"quantity\"))\n         needed[product_id] = needed.get(product_id, 0) + quantity\n     for quantity in needed.values():\n         validate_quantity(quantity)\n     return needed\n \n \n def _require_available(stock: Mapping[str, int], product_id: str, quantity: int) -> None:\n     available = stock.get(product_id)\n     if isinstance(available, bool) or not isinstance(available, int) or available < quantity:\n         raise InventoryError(f\"insufficient stock for {product_id}\")\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/inventory.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:08:51Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:09:00Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:09:00Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/inventory.py b/order_service/inventory.py\n--- a/order_service/inventory.py\n+++ b/order_service/inventory.py\n@@ -15,6 +15,7 @@\n     needed = _aggregate(items)\n     for product_id, quantity in needed.items():\n         _require_available(stock, product_id, quantity)\n+    for product_id, quantity in needed.items():\n         stock[product_id] -= quantity\n \n \n",
+  "visible_tests": ""
+}

@@ -42,7 +42,9 @@ jobs:
         run: |
           docker run -d --name viewer -e PORT=8000 -p 8000:8000 verified-repair-agent-viewer:ci
           for _ in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS http://127.0.0.1:8000/healthz; then
+            if body=$(curl -fsS http://127.0.0.1:8000/healthz); then
+              printf '%s\n' "$body"
+              printf '%s' "$body" | grep -q '"bundles":18'
               exit 0
             fi
             sleep 1

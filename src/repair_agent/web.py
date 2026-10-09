@@ -47,27 +47,35 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def resolve_public_dir(root: Path | None = None) -> Path:
-    """Directory of published bundles. An explicit env path wins.
+def resolve_public_dirs(root: Path | None = None) -> list[Path]:
+    """Directories of published bundles. An explicit env path wins.
 
-    When ``public_runs`` has no bundles, the example recordings are used so
-    the viewer can start with no separate publish step. Raw ``runs`` are
-    never selected.
+    When ``public_runs`` has no bundles, the checked-in example recordings
+    and development recordings are both used. Raw ``runs`` are never selected.
     """
     raw = os.environ.get("REPAIR_AGENT_PUBLIC_RUNS")
     if raw:
         path = Path(raw)
-        return path if path.is_absolute() else Path.cwd() / path
+        return [path if path.is_absolute() else Path.cwd() / path]
     base = root or _repo_root()
     primary = base / "public_runs"
     if any(primary.glob("*/public.json")):
-        return primary
-    return base / "examples" / "public_runs"
+        return [primary]
+    directories = [base / "examples" / "public_runs"]
+    dev = base / "examples" / "dev_runs"
+    if any(dev.glob("*/public.json")):
+        directories.append(dev)
+    return directories
+
+
+def resolve_public_dir(root: Path | None = None) -> Path:
+    """First directory from :func:`resolve_public_dirs`."""
+    return resolve_public_dirs(root)[0]
 
 
 def create_app(public_dir: Path | None = None) -> FastAPI:
-    """Build the viewer. ``public_dir`` defaults to :func:`resolve_public_dir`."""
-    directory = public_dir if public_dir is not None else resolve_public_dir()
+    """Build the viewer. ``public_dir`` overrides :func:`resolve_public_dirs`."""
+    directories = [public_dir] if public_dir is not None else resolve_public_dirs()
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
         autoescape=select_autoescape(["html", "xml"]),
@@ -79,13 +87,17 @@ def create_app(public_dir: Path | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     def catalog() -> list[PublicRun]:
-        return load_public_runs(directory)
+        runs: list[PublicRun] = []
+        for directory in directories:
+            runs.extend(load_public_runs(directory))
+        runs.sort(key=lambda item: item.run_id)
+        return runs
 
     def render(request: Request, name: str, context: dict[str, object], status_code: int = 200):
         payload = {
             "recorded_line": RECORDED_LINE,
             "source_url": SOURCE_URL,
-            "demo_note": demo_note(directory),
+            "demo_note": _first_demo_note(directories),
             **context,
         }
         return templates.TemplateResponse(request, name, payload, status_code=status_code)
@@ -181,6 +193,14 @@ def load_public_runs(directory: Path) -> list[PublicRun]:
         except (OSError, ValidationError, json.JSONDecodeError):
             continue
     return runs
+
+
+def _first_demo_note(directories: list[Path]) -> str | None:
+    for directory in directories:
+        note = demo_note(directory)
+        if note:
+            return note
+    return None
 
 
 def demo_note(directory: Path) -> str | None:

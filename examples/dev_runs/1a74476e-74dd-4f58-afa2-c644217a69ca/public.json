@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "1a74476e-74dd-4f58-afa2-c644217a69ca",
+  "case_id": "D08",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Updated order serialization to exclude the internal payment_token while preserving the standard public order fields and copying nested item containers.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/serialization.py"
+  ],
+  "patch_sha256": "9299f2e337fae82ee6dde7fad9f8ded580e0a0dcf83235d1064d739829e0e741",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9522,
+  "cached_input_tokens": 0,
+  "output_tokens": 545,
+  "reasoning_tokens": 29,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 11.889,
+  "estimated_cost_usd": 0.009594,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "cbb3009740c990ac41b52d4337a23da6b632464b4a326c2209e76e03e0ff19e7",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:10:00Z",
+  "finished_at_utc": "2026-10-09T02:10:12Z",
+  "issue": "# The payment token is visible on the order\n\nThe order view I get back includes an internal payment token. Clients should not receive that field, whatever value it has. The usual order fields should still be there, and line items should be included.\n\nExample: after creating an order, the response has the id, user, items, totals, status, and creation sequence, and it also includes payment_token. payment_token should be absent.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:10:00Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:10:02Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Updated order serialization to exclude the internal payment_token while preserving the standard public order fields and copying nested item containers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/serialization.py b/order_service/serialization.py\\\\n--- a/order_service/serialization.py\\\\n+++ b/order_service/serialization.py\\\\n@@ -1,35 +1,34 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Public order view. ``payment_token`` is not included.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping\\\\n from typing import Any\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n PUBLIC_ORDER_FIELDS = (\\\\n     \\\\\\\"id\\\\\\\",\\\\n     \\\\\\\"user_id\\\\\\\",\\\\n     \\\\\\\"items\\\\\\\",\\\\n     \\\\\\\"subtotal_cents\\\\\\\",\\\\n     \\\\\\\"discount_cents\\\\\\\",\\\\n     \\\\\\\"shipping_cents\\\\\\\",\\\\n     \\\\\\\"total_cents\\\\\\\",\\\\n     \\\\\\\"status\\\\\\\",\\\\n     \\\\\\\"creation_sequence\\\\\\\",\\\\n )\\\\n \\\\n \\\\n def serialize_order(order: object) -> dict[str, Any]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return a fresh dict. Nested item dicts are copies.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     data = _mapping(order)\\\\n     raw_items = data.get(\\\\\\\"items\\\\\\\")\\\\n     if not isinstance(raw_items, (list, tuple)):\\\\n         raise ValidationError(\\\\\\\"order items must be a list\\\\\\\")\\\\n     items = []\\\\n     for item in raw_items:\\\\n         item_data = _mapping(item)\\\\n         items.append(\\\\n             {\\\\n                 \\\\\\\"product_id\\\\\\\": item_data[\\\\\\\"product_id\\\\\\\"],\\\\n                 \\\\\\\"quantity\\\\\\\": item_data[\\\\\\\"quantity\\\\\\\"],\\\\n                 \\\\\\\"unit_price_cents\\\\\\\": item_data[\\\\\\\"unit_price_cents\\\\\\\"],\\\\n             }\\\\n         )\\\\n-    body = {field: items if field == \\\\\\\"items\\\\\\\" else data[field] for field in PUBLIC_ORDER_FIELDS}\\\\n-    body[\\\\\\\"payment_token\\\\\\\"] = data[\\\\\\\"payment_token\\\\\\\"]\\\\n-    return body\\\\n+    return {field: items if field == \\\\\\\"items\\\\\\\" else data[field] for field in PUBLIC_ORDER_FIELDS}\\\\n \\\\n \\\\n def _mapping(value: object) -> Mapping[str, Any]:\\\\n     if isinstance(value, Mapping):\\\\n         return value\\\\n     if hasattr(value, \\\\\\\"__dict__\\\\\\\"):\\\\n         return vars(value)\\\\n     raise ValidationError(\\\\\\\"expected an order or line item\\\\\\\")\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Updated order serialization to exclude the internal payment_token while preserving the standard public order fields and copying nested item containers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/serialization.py b/order_service/serialization.py\\\\n--- a/order_service/serialization.py\\\\n+++ b/order_service/serialization.py\\\\n@@ -1,35 +1,34 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Public order view. ``payment_token`` is not included.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping\\\\n from typing import Any\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n PUBLIC_ORDER_FIELDS = (\\\\n     \\\\\\\"id\\\\\\\",\\\\n     \\\\\\\"user_id\\\\\\\",\\\\n     \\\\\\\"items\\\\\\\",\\\\n     \\\\\\\"subtotal_cents\\\\\\\",\\\\n     \\\\\\\"discount_cents\\\\\\\",\\\\n     \\\\\\\"shipping_cents\\\\\\\",\\\\n     \\\\\\\"total_cents\\\\\\\",\\\\n     \\\\\\\"status\\\\\\\",\\\\n     \\\\\\\"creation_sequence\\\\\\\",\\\\n )\\\\n \\\\n \\\\n def serialize_order(order: object) -> dict[str, Any]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return a fresh dict. Nested item dicts are copies.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     data = _mapping(order)\\\\n     raw_items = data.get(\\\\\\\"items\\\\\\\")\\\\n     if not isinstance(raw_items, (list, tuple)):\\\\n         raise ValidationError(\\\\\\\"order items must be a list\\\\\\\")\\\\n     items = []\\\\n     for item in raw_items:\\\\n         item_data = _mapping(item)\\\\n         items.append(\\\\n             {\\\\n                 \\\\\\\"product_id\\\\\\\": item_data[\\\\\\\"product_id\\\\\\\"],\\\\n                 \\\\\\\"quantity\\\\\\\": item_data[\\\\\\\"quantity\\\\\\\"],\\\\n                 \\\\\\\"unit_price_cents\\\\\\\": item_data[\\\\\\\"unit_price_cents\\\\\\\"],\\\\n             }\\\\n         )\\\\n-    body = {field: items if field == \\\\\\\"items\\\\\\\" else data[field] for field in PUBLIC_ORDER_FIELDS}\\\\n-    body[\\\\\\\"payment_token\\\\\\\"] = data[\\\\\\\"payment_token\\\\\\\"]\\\\n-    return body\\\\n+    return {field: items if field == \\\\\\\"items\\\\\\\" else data[field] for field in PUBLIC_ORDER_FIELDS}\\\\n \\\\n \\\\n def _mapping(value: object) -> Mapping[str, Any]:\\\\n     if isinstance(value, Mapping):\\\\n         return value\\\\n     if hasattr(value, \\\\\\\"__dict__\\\\\\\"):\\\\n         return vars(value)\\\\n     raise ValidationError(\\\\\\\"expected an order or line item\\\\\\\")\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Updated order serialization to exclude the internal payment_token while preserving the standard public order fields and copying nested item containers.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/serialization.py b/order_service/serialization.py\\\\n--- a/order_service/serialization.py\\\\n+++ b/order_service/serialization.py\\\\n@@ -1,35 +1,34 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"Public order view. ``payment_token`` is not included.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Mapping\\\\n from typing import Any\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n PUBLIC_ORDER_FIELDS = (\\\\n     \\\\\\\"id\\\\\\\",\\\\n     \\\\\\\"user_id\\\\\\\",\\\\n     \\\\\\\"items\\\\\\\",\\\\n     \\\\\\\"subtotal_cents\\\\\\\",\\\\n     \\\\\\\"discount_cents\\\\\\\",\\\\n     \\\\\\\"shipping_cents\\\\\\\",\\\\n     \\\\\\\"total_cents\\\\\\\",\\\\n     \\\\\\\"status\\\\\\\",\\\\n     \\\\\\\"creation_sequence\\\\\\\",\\\\n )\\\\n \\\\n \\\\n def serialize_order(order: object) -> dict[str, Any]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return a fresh dict. Nested item dicts are copies.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     data = _mapping(order)\\\\n     raw_items = data.get(\\\\\\\"items\\\\\\\")\\\\n     if not isinstance(raw_items, (list, tuple)):\\\\n         raise ValidationError(\\\\\\\"order items must be a list\\\\\\\")\\\\n     items = []\\\\n     for item in raw_items:\\\\n         item_data = _mapping(item)\\\\n         items.append(\\\\n             {\\\\n                 \\\\\\\"product_id\\\\\\\": item_data[\\\\\\\"product_id\\\\\\\"],\\\\n                 \\\\\\\"quantity\\\\\\\": item_data[\\\\\\\"quantity\\\\\\\"],\\\\n                 \\\\\\\"unit_price_cents\\\\\\\": item_data[\\\\\\\"unit_price_cents\\\\\\\"],\\\\n             }\\\\n         )\\\\n-    body = {field: items if field == \\\\\\\"items\\\n[truncated]"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:10:02Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/serialization.py b/order_service/serialization.py\n--- a/order_service/serialization.py\n+++ b/order_service/serialization.py\n@@ -1,35 +1,34 @@\n \"\"\"Public order view. ``payment_token`` is not included.\"\"\"\n \n from __future__ import annotations\n \n from collections.abc import Mapping\n from typing import Any\n \n from .errors import ValidationError\n \n PUBLIC_ORDER_FIELDS = (\n     \"id\",\n     \"user_id\",\n     \"items\",\n     \"subtotal_cents\",\n     \"discount_cents\",\n     \"shipping_cents\",\n     \"total_cents\",\n     \"status\",\n     \"creation_sequence\",\n )\n \n \n def serialize_order(order: object) -> dict[str, Any]:\n     \"\"\"Return a fresh dict. Nested item dicts are copies.\"\"\"\n     data = _mapping(order)\n     raw_items = data.get(\"items\")\n     if not isinstance(raw_items, (list, tuple)):\n         raise ValidationError(\"order items must be a list\")\n     items = []\n     for item in raw_items:\n         item_data = _mapping(item)\n         items.append(\n             {\n                 \"product_id\": item_data[\"product_id\"],\n                 \"quantity\": item_data[\"quantity\"],\n                 \"unit_price_cents\": item_data[\"unit_price_cents\"],\n             }\n         )\n-    body = {field: items if field == \"items\" else data[field] for field in PUBLIC_ORDER_FIELDS}\n-    body[\"payment_token\"] = data[\"payment_token\"]\n-    return body\n+    return {field: items if field == \"items\" else data[field] for field in PUBLIC_ORDER_FIELDS}\n \n \n def _mapping(value: object) -> Mapping[str, Any]:\n     if isinstance(value, Mapping):\n         return value\n     if hasattr(value, \"__dict__\"):\n         return vars(value)\n     raise ValidationError(\"expected an order or line item\")\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/serialization.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:10:02Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:10:11Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:10:12Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/serialization.py b/order_service/serialization.py\n--- a/order_service/serialization.py\n+++ b/order_service/serialization.py\n@@ -36,9 +36,7 @@\n                 \"unit_price_cents\": item_data[\"unit_price_cents\"],\n             }\n         )\n-    body = {field: items if field == \"items\" else data[field] for field in PUBLIC_ORDER_FIELDS}\n-    body[\"payment_token\"] = data[\"payment_token\"]\n-    return body\n+    return {field: items if field == \"items\" else data[field] for field in PUBLIC_ORDER_FIELDS}\n \n \n def _mapping(value: object) -> Mapping[str, Any]:\n",
+  "visible_tests": ""
+}
