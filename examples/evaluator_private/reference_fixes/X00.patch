@@ -1,0 +1,12 @@
+diff --git a/order_service/example_ops.py b/order_service/example_ops.py
+--- a/order_service/example_ops.py
++++ b/order_service/example_ops.py
+@@ -6,7 +6,7 @@
+ 
+ _LABELS = {
+     "open": "Open",
+-    "cancelled": "Canceled",
++    "cancelled": "Cancelled",
+ }
+ 
+ 

@@ -1,0 +1,14 @@
+diff --git a/order_service/serialization.py b/order_service/serialization.py
+--- a/order_service/serialization.py
++++ b/order_service/serialization.py
+@@ -36,7 +36,9 @@
+                 "unit_price_cents": item_data["unit_price_cents"],
+             }
+         )
+-    return {field: items if field == "items" else data[field] for field in PUBLIC_ORDER_FIELDS}
++    body = {field: items if field == "items" else data[field] for field in PUBLIC_ORDER_FIELDS}
++    body["payment_token"] = data["payment_token"]
++    return body
+ 
+ 
+ def _mapping(value: object) -> Mapping[str, Any]:

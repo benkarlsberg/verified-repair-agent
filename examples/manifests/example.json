@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "split": "example",
+  "cases": [
+    {
+      "case_id": "X00",
+      "split": "example",
+      "kind": "bug",
+      "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+      "bug_patch": "examples/cases/X00/bug.patch",
+      "issue_path": "examples/cases/X00/issue.md",
+      "allowed_paths": [
+        "order_service/example_ops.py"
+      ],
+      "visible_test_paths": [
+        "tests_visible"
+      ],
+      "evaluator_test_dir": "examples/evaluator_private/tests/X00",
+      "reference_fix": "examples/evaluator_private/reference_fixes/X00.patch"
+    }
+  ]
+}

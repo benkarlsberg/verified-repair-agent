@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "model": {
+    "provider": null,
+    "model_id": null,
+    "selection_status": "unset",
+    "note": "This repository does not call a model. The hosted model id stays unset until the adapter exists."
+  },
+  "budgets": {
+    "wall_clock_seconds": 600,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 100000,
+    "max_output_tokens_per_response": 4000,
+    "test_timeout_seconds": 30
+  },
+  "runner": {
+    "image": "verified-repair-agent-runner:fixture",
+    "cpus": "1",
+    "memory": "512m",
+    "pids_limit": 128,
+    "timeout_seconds": 30,
+    "log_limit_bytes": 65536,
+    "output_limit_bytes": 10485760,
+    "tmpfs_size": "64m"
+  },
+  "patch_policy": {
+    "max_changed_lines": 200,
+    "max_files": 5
+  }
+}
