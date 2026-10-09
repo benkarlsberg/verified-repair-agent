@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "run_id": "3faca4bb-ee44-4bb1-a53f-da237ab166a2",
+  "case_id": "D04",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed idempotent checkout handling so a repeated create_order call with the same user, idempotency key, and canonical payload now returns the original order without creating a second order or reserving stock again.",
+  "limitations": [
+    "No other modules were changed, so behavior outside order creation remains as-is.",
+    "The fix assumes the existing stored idempotency record and order remain consistent in memory."
+  ],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/orders.py"
+  ],
+  "patch_sha256": "41a91890174fcc994ddebff1004777e5243037a4a115baae90c11b115bc5d773",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9516,
+  "cached_input_tokens": 0,
+  "output_tokens": 393,
+  "reasoning_tokens": 54,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 11.688,
+  "estimated_cost_usd": 0.0089055,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "8c8312b364d2b9513944fbace191325fcd1652af91cb7055db7f0ac7512aa2a5",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:07:37Z",
+  "finished_at_utc": "2026-10-09T02:07:49Z",
+  "issue": "# Retrying a checkout creates a second order\n\nSubmitting the same order again with the same idempotency key should return the original order. A retry created a new order and reserved stock again.\n\nExample: user ada sends idempotency key \"pay-1\" for one mug, addressed to \"1 Main St\". The first response is order A. Sending that same request again should return order A, the order count should stay 1, and only one mug should be reserved. A different idempotency key should still create a different order.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:07:37Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:07:40Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed idempotent checkout handling so a repeated create_order call with the same user, idempotency key, and canonical payload now returns the original order without creating a second order or reserving stock again.\\\",\\\"limitations\\\":[\\\"No other modules were changed, so behavior outside order creation remains as-is.\\\",\\\"The fix assumes the existing stored idempotency record and order remain consistent in memory.\\\"],\\\"patch\\\":\\\"diff --git a/order_service/orders.py b/order_service/orders.py\\\\n--- a/order_service/orders.py\\\\n+++ b/order_service/orders.py\\\\n@@ -101,10 +101,12 @@\\\\n def create_order(store: Store, user_id: object, key: object, payload: object) -> Order:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Reserve stock once. The same user, key, and payload return the original order.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     user = validate_token(user_id, name=\\\\\\\"user_id\\\\\\\")\\\\n     idempotency_key = validate_token(key, name=\\\\\\\"idempotency key\\\\\\\")\\\\n     canonical = canonical_payload(payload)\\\\n     existing = store._idempotency.get((user, idempotency_key))\\\\n     if existing is not None:\\\\n         if existing.canonical != canonical:\\\\n             raise ConflictError(\\\\\\\"idempotency key reused with a different payload\\\\\\\")\\\\n+        return store.orders[existing.order_id]\\\\n \\\\n     lines = []\\\\n     priced: list[dict[str, int]] = []\\\\n     for product_id, quantity in canonical[1]:\\\\n         price = store.catalog.get(product_id)\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed idempotent checkout handling so a repeated create_order call with the same user, idempotency key, and canonical payload now returns the original order without creating a second order or reserving stock again.\\\",\\\"limitations\\\":[\\\"No other modules were changed, so behavior outside order creation remains as-is.\\\",\\\"The fix assumes the existing stored idempotency record and order remain consistent in memory.\\\"],\\\"patch\\\":\\\"diff --git a/order_service/orders.py b/order_service/orders.py\\\\n--- a/order_service/orders.py\\\\n+++ b/order_service/orders.py\\\\n@@ -101,10 +101,12 @@\\\\n def create_order(store: Store, user_id: object, key: object, payload: object) -> Order:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Reserve stock once. The same user, key, and payload return the original order.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     user = validate_token(user_id, name=\\\\\\\"user_id\\\\\\\")\\\\n     idempotency_key = validate_token(key, name=\\\\\\\"idempotency key\\\\\\\")\\\\n     canonical = canonical_payload(payload)\\\\n     existing = store._idempotency.get((user, idempotency_key))\\\\n     if existing is not None:\\\\n         if existing.canonical != canonical:\\\\n             raise ConflictError(\\\\\\\"idempotency key reused with a different payload\\\\\\\")\\\\n+        return store.orders[existing.order_id]\\\\n \\\\n     lines = []\\\\n     priced: list[dict[str, int]] = []\\\\n     for product_id, quantity in canonical[1]:\\\\n         price = store.catalog.get(product_id)\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed idempotent checkout handling so a repeated create_order call with the same user, idempotency key, and canonical payload now returns the original order without creating a second order or reserving stock again.\\\",\\\"limitations\\\":[\\\"No other modules were changed, so behavior outside order creation remains as-is.\\\",\\\"The fix assumes the existing stored idempotency record and order remain consistent in memory.\\\"],\\\"patch\\\":\\\"diff --git a/order_service/orders.py b/order_service/orders.py\\\\n--- a/order_service/orders.py\\\\n+++ b/order_service/orders.py\\\\n@@ -101,10 +101,12 @@\\\\n def create_order(store: Store, user_id: object, key: object, payload: object) -> Order:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Reserve stock once. The same user, key, and payload return the original order.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     user = validate_token(user_id, name=\\\\\\\"user_id\\\\\\\")\\\\n     idempotency_key = validate_token(key, name=\\\\\\\"idempotency key\\\\\\\")\\\\n     canonical = canonical_payload(payload)\\\\n     existing = store._idempotency.get((user, idempotency_key))\\\\n     if existing is not None:\\\\n         if existing.canonical != canonical:\\\\n             raise ConflictError(\\\\\\\"idempotency key reused with a different payload\\\\\\\")\\\\n+        return store.orders[existing.order_id]\\\\n \\\\n     lines = []\\\\n     priced: list[dict[str, int]] = []\\\\n     for product_id, quantity in canonical[1]:\\\\n         price = store.catalog.get(product_id)\\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:07:40Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/orders.py b/order_service/orders.py\n--- a/order_service/orders.py\n+++ b/order_service/orders.py\n@@ -101,10 +101,12 @@\n def create_order(store: Store, user_id: object, key: object, payload: object) -> Order:\n     \"\"\"Reserve stock once. The same user, key, and payload return the original order.\"\"\"\n     user = validate_token(user_id, name=\"user_id\")\n     idempotency_key = validate_token(key, name=\"idempotency key\")\n     canonical = canonical_payload(payload)\n     existing = store._idempotency.get((user, idempotency_key))\n     if existing is not None:\n         if existing.canonical != canonical:\n             raise ConflictError(\"idempotency key reused with a different payload\")\n+        return store.orders[existing.order_id]\n \n     lines = []\n     priced: list[dict[str, int]] = []\n     for product_id, quantity in canonical[1]:\n         price = store.catalog.get(product_id)\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/orders.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:07:40Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:07:49Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:07:49Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/orders.py b/order_service/orders.py\n--- a/order_service/orders.py\n+++ b/order_service/orders.py\n@@ -118,6 +118,7 @@\n     if existing is not None:\n         if existing.canonical != canonical:\n             raise ConflictError(\"idempotency key reused with a different payload\")\n+        return store.orders[existing.order_id]\n \n     lines = []\n     priced: list[dict[str, int]] = []\n",
+  "visible_tests": ""
+}

@@ -3,6 +3,8 @@
 private/
 runs/
 /public_runs/
+reports/*
+!reports/evaluation.md
 workspaces/
 __pycache__/
 .pytest_cache/

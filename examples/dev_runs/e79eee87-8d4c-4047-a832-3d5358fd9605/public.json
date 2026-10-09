@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "run_id": "e79eee87-8d4c-4047-a832-3d5358fd9605",
+  "case_id": "D02",
+  "method": "iterative",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed quantity validation so 0 is rejected, matching the contract that quantities must be integers from 1 through 100. Added a reproduction test demonstrating the bug before the edit, then verified the full visible suite passes after the fix.",
+  "limitations": [
+    "Only the quantity validation defect was addressed, as requested by the issue and allowed edit scope."
+  ],
+  "evidence": [
+    "agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected failed before the change because validate_quantity(0) did not raise ValidationError.",
+    "Updated order_service/validation.py to require MIN_QUANTITY <= value <= MAX_QUANTITY.",
+    "Visible tests passed after the fix: 68 passed."
+  ],
+  "source_files_changed": [
+    "order_service/validation.py"
+  ],
+  "patch_sha256": "9d56834634f4a3ab0f7844320837c3c02d1ad980bb8a31ee5c3c3c1ac14f58c2",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 63910,
+  "cached_input_tokens": 51200,
+  "output_tokens": 653,
+  "reasoning_tokens": 102,
+  "tool_calls": 7,
+  "patch_attempts": 1,
+  "elapsed_seconds": 27.428,
+  "estimated_cost_usd": 0.016311,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "3ed9b232128f0870c392231473a856daeeda7a48bbc6ce875e0873be4af9e1ec",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": true,
+  "reproduction_passed_after_patch": true,
+  "stop_reason": "finish",
+  "started_at_utc": "2026-10-09T02:05:58Z",
+  "finished_at_utc": "2026-10-09T02:06:26Z",
+  "issue": "# A quantity of zero is accepted\n\nQuantities have to be whole numbers from 1 through 100. Zero, negative numbers, booleans, and values that are not integers should be rejected. A line with quantity 0 is currently accepted.\n\nExample: quantity 1 and quantity 20 are valid. Quantity 0, -1, true, 1.5, and the text \"2\" should all be rejected.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:05:58Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:06:00Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "4 items; last={\"type\": \"function_call\", \"call_id\": \"call_1BKFdhPfV74eji2i2zRpfrVk\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"list_files\", \"arguments\": \"{}\"}, {\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_PdCG1xHcOq2FXE3f2y0K7DuA\", \"name\": \"list_files\", \"arguments\": \"{}\"}, {\"type\": \"function_call\", \"call_id\": \"call_1BKFdhPfV74eji2i2zRpfrVk\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:06:00Z",
+      "category": "tool",
+      "tool_name": "list_files",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"files\": [\"order_service/validation.py\", \"tests_visible/test_api.py\", \"tests_visible/test_example_ops.py\", \"tests_visible/test_inventory.py\", \"tests_visible/test_orders.py\", \"tests_visible/test_pagination.py\", \"tests_visible/test_pricing.py\", \"tests_visible/test_serialization.py\", \"tests_visible/test_validation.py\"], \"ok\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:06:03Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"...................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n67 passed, 1 warning in 0.34s\"}"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:06:06Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "7 items; last={\"type\": \"function_call\", \"call_id\": \"call_7G5KpopqNGLDSJ723vE9rrIZ\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_validation_repro.py b/agent_tests/test_validation_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_validation_repro.py\\\\n@@ -0,0 +1,10 @@\\\\n+import pytest\\\\n+\\\\n+from order_service.errors import ValidationError\\\\n+from order_service.validation import validate_quantity\\\\n+\\\\n+\\\\n+def test_quantity_zero_is_rejected() -> None:\\\\n+    with pytest.raises(ValidationError):\\\\n+        validate_quantity(0)\\\\n+\\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_validation_repro.py b/agent_tests/test_validation_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_validation_repro.py\\\\n@@ -0,0 +1,10 @@\\\\n+import pytest\\\\n+\\\\n+from order_service.errors import ValidationError\\\\n+from order_service.validation import validate_quantity\\\\n+\\\\n+\\\\n+def test_quantity_zero_is_rejected() -> None:\\\\n+    with pytest.raises(ValidationError):\\\\n+        validate_quantity(0)\\\\n+\\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_7G5KpopqNGLDSJ723vE9rrIZ\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\": \\\"diff --git a/agent_tests/test_validation_repro.py b/agent_tests/test_validation_repro.py\\\\nnew file mode 100644\\\\n--- dev/null\\\\n+++ b/agent_tests/test_validation_repro.py\\\\n@@ -0,0 +1,10 @@\\\\n+import pytest\\\\n+\\\\n+from order_service.errors import ValidationError\\\\n+from order_service.validation import validate_quantity\\\\n+\\\\n+\\\\n+def test_quantity_zero_is_rejected() -> None:\\\\n+    with pytest.raises(ValidationError):\\\\n+        validate_quantity(0)\\\\n+\\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:06:06Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\": \"diff --git a/agent_tests/test_validation_repro.py b/agent_tests/test_validation_repro.py\\nnew file mode 100644\\n--- dev/null\\n+++ b/agent_tests/test_validation_repro.py\\n@@ -0,0 +1,10 @@\\n+import pytest\\n+\\n+from order_service.errors import ValidationError\\n+from order_service.validation import validate_quantity\\n+\\n+\\n+def test_quantity_zero_is_rejected() -> None:\\n+    with pytest.raises(ValidationError):\\n+        validate_quantity(0)\\n+\\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"agent_tests/test_validation_repro.py\"], \"source\": false}"
+    },
+    {
+      "seq": 7,
+      "timestamp_utc": "2026-10-09T02:06:07Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "9 items; last={\"type\": \"function_call\", \"call_id\": \"call_ocOLXRowrB4LOMYwmR5GGmuY\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_ocOLXRowrB4LOMYwmR5GGmuY\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 8,
+      "timestamp_utc": "2026-10-09T02:06:09Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": false,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": false, \"exit_code\": 1, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"...................................................................F\\n=================================== FAILURES ===================================\\n________________________ test_quantity_zero_is_rejected ________________________\\nagent_tests/test_validation_repro.py:8: in test_quantity_zero_is_rejected\\n    with pytest.raises(ValidationError):\\nE   Failed: DID NOT RAISE <class 'order_service.errors.ValidationError'>\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n=========================== short test summary info ============================\\nFAILED agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected\\n1 failed, 67 passed, 1 warning in 0.37s\"}"
+    },
+    {
+      "seq": 9,
+      "timestamp_utc": "2026-10-09T02:06:11Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "11 items; last={\"type\": \"function_call\", \"call_id\": \"call_IBaOGuOlnkRddcTnMI65yBLN\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,7 +9,7 @@ MAX_QUANTITY = 100\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n \\\\n\\\"}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,7 +9,7 @@ MAX_QUANTITY = 100\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n \\\\n\\\"}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_IBaOGuOlnkRddcTnMI65yBLN\", \"name\": \"apply_patch\", \"arguments\": \"{\\\"patch\\\":\\\"diff --git a/order_service/validation.py b/order_service/validation.py\\\\n--- a/order_service/validation.py\\\\n+++ b/order_service/validation.py\\\\n@@ -9,7 +9,7 @@ MAX_QUANTITY = 100\\\\n def validate_quantity(value: object) -> int:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(value, bool) or not isinstance(value, int):\\\\n         raise ValidationError(\\\\\\\"quantity must be an integer\\\\\\\")\\\\n-    if not 0 <= value <= MAX_QUANTITY:\\\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\\\n         raise ValidationError(\\\\\\\"quantity must be from 1 through 100\\\\\\\")\\\\n     return value\\\\n \\\\n\\\"}\"}]}"
+    },
+    {
+      "seq": 10,
+      "timestamp_utc": "2026-10-09T02:06:11Z",
+      "category": "tool",
+      "tool_name": "apply_patch",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"patch\":\"diff --git a/order_service/validation.py b/order_service/validation.py\\n--- a/order_service/validation.py\\n+++ b/order_service/validation.py\\n@@ -9,7 +9,7 @@ MAX_QUANTITY = 100\\n def validate_quantity(value: object) -> int:\\n     \\\"\\\"\\\"Accept an integer from 1 through 100. Booleans are rejected.\\\"\\\"\\\"\\n     if isinstance(value, bool) or not isinstance(value, int):\\n         raise ValidationError(\\\"quantity must be an integer\\\")\\n-    if not 0 <= value <= MAX_QUANTITY:\\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\\n         raise ValidationError(\\\"quantity must be from 1 through 100\\\")\\n     return value\\n \\n\"}",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/validation.py\"], \"source\": true}"
+    },
+    {
+      "seq": 11,
+      "timestamp_utc": "2026-10-09T02:06:12Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "13 items; last={\"type\": \"function_call\", \"call_id\": \"call_INe35UbaBxHEAS6OHJYolaBr\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"run_visible_tests\", \"arguments\": \"{}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_INe35UbaBxHEAS6OHJYolaBr\", \"name\": \"run_visible_tests\", \"arguments\": \"{}\"}]}"
+    },
+    {
+      "seq": 12,
+      "timestamp_utc": "2026-10-09T02:06:15Z",
+      "category": "tool",
+      "tool_name": "run_visible_tests",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{}",
+      "response_summary": "{\"ok\": true, \"exit_code\": 0, \"timed_out\": false, \"truncated\": false, \"runner_failed\": false, \"output\": \"....................................................................\\n=============================== warnings summary ===============================\\n..starlette/testclient.py:37\\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\\n\\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\\n68 passed, 1 warning in 0.36s\"}"
+    },
+    {
+      "seq": 13,
+      "timestamp_utc": "2026-10-09T02:06:17Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "15 items; last={\"type\": \"function_call\", \"call_id\": \"call_3axJ1mKVX4eL7PwM4D6iHyjG\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed quantity validation so 0 is rejected, matching the contract that quantities must be integers from 1 through 100. Added a reproduction test demonstrating the bug before the edit, then verified the full visible suite passes after the fix.\\\",\\\"evidence\\\":[\\\"agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected failed before the change because validate_quantity(0) did not raise ValidationError.\\\",\\\"Updated order_service/validation.py to require MIN_QUANTITY <= value <= MAX_QUANTITY.\\\",\\\"Visible tests passed after the fix: 68 passed.\\\"],\\\"limitations\\\":[\\\"Only the quantity validation defect was addressed, as requested by the issue and allowed edit scope.\\\"]}\"}",
+      "response_summary": "{\"text\": \"\", \"tool_calls\": [{\"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed quantity validation so 0 is rejected, matching the contract that quantities must be integers from 1 through 100. Added a reproduction test demonstrating the bug before the edit, then verified the full visible suite passes after the fix.\\\",\\\"evidence\\\":[\\\"agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected failed before the change because validate_quantity(0) did not raise ValidationError.\\\",\\\"Updated order_service/validation.py to require MIN_QUANTITY <= value <= MAX_QUANTITY.\\\",\\\"Visible tests passed after the fix: 68 passed.\\\"],\\\"limitations\\\":[\\\"Only the quantity validation defect was addressed, as requested by the issue and allowed edit scope.\\\"]}\"}], \"items\": [{\"type\": \"function_call\", \"call_id\": \"call_3axJ1mKVX4eL7PwM4D6iHyjG\", \"name\": \"finish\", \"arguments\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed quantity validation so 0 is rejected, matching the contract that quantities must be integers from 1 through 100. Added a reproduction test demonstrating the bug before the edit, then verified the full visible suite passes after the fix.\\\",\\\"evidence\\\":[\\\"agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected failed before the change because validate_quantity(0) did not raise ValidationError.\\\",\\\"Updated order_service/validation.py to require MIN_QUANTITY <= value <= MAX_QUANTITY.\\\",\\\"Visible tests passed after the fix: 68 passed.\\\"],\\\"limitations\\\":[\\\"Only the quantity validation defect was addressed, as requested by the issue and allowed edit scope.\\\"]}\"}]}"
+    },
+    {
+      "seq": 14,
+      "timestamp_utc": "2026-10-09T02:06:17Z",
+      "category": "tool",
+      "tool_name": "finish",
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "{\"claim\":\"repaired\",\"summary\":\"Fixed quantity validation so 0 is rejected, matching the contract that quantities must be integers from 1 through 100. Added a reproduction test demonstrating the bug before the edit, then verified the full visible suite passes after the fix.\",\"evidence\":[\"agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected failed before the change because validate_quantity(0) did not raise ValidationError.\",\"Updated order_service/validation.py to require MIN_QUANTITY <= value <= MAX_QUANTITY.\",\"Visible tests passed after the fix: 68 passed.\"],\"limitations\":[\"Only the quantity validation defect was addressed, as requested by the issue and allowed edit scope.\"]}",
+      "response_summary": "{\"ok\": true, \"claim\": \"repaired\", \"stopped\": true}"
+    },
+    {
+      "seq": 15,
+      "timestamp_utc": "2026-10-09T02:06:17Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 16,
+      "timestamp_utc": "2026-10-09T02:06:26Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 17,
+      "timestamp_utc": "2026-10-09T02:06:26Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=finish"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/validation.py b/order_service/validation.py\n--- a/order_service/validation.py\n+++ b/order_service/validation.py\n@@ -12,7 +12,7 @@\n     \"\"\"Accept an integer from 1 through 100. Booleans are rejected.\"\"\"\n     if isinstance(value, bool) or not isinstance(value, int):\n         raise ValidationError(\"quantity must be an integer\")\n-    if not 0 <= value <= MAX_QUANTITY:\n+    if not MIN_QUANTITY <= value <= MAX_QUANTITY:\n         raise ValidationError(\"quantity must be from 1 through 100\")\n     return value\n \n",
+  "visible_tests": "...................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n67 passed, 1 warning in 0.34s\n\n...................................................................F\n=================================== FAILURES ===================================\n________________________ test_quantity_zero_is_rejected ________________________\nagent_tests/test_validation_repro.py:8: in test_quantity_zero_is_rejected\n    with pytest.raises(ValidationError):\nE   Failed: DID NOT RAISE <class 'order_service.errors.ValidationError'>\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED agent_tests/test_validation_repro.py::test_quantity_zero_is_rejected\n1 failed, 67 passed, 1 warning in 0.37s\n\n....................................................................\n=============================== warnings summary ===============================\nstarlette/testclient.py:37\n  starlette/testclient.py:37: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.\n    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n68 passed, 1 warning in 0.36s\n"
+}

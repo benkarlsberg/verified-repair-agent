@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "run_id": "8832c982-0405-4754-8af5-ce4c2b044d42",
+  "case_id": "D07",
+  "method": "one_shot",
+  "repetition": 1,
+  "status": "completed",
+  "agent_claim": "repaired",
+  "verification": "passed",
+  "summary": "Fixed 1-based pagination so page 1 starts at offset 0 instead of skipping the first item. The function still validates page and size and returns the real total count.",
+  "limitations": [],
+  "evidence": [],
+  "source_files_changed": [
+    "order_service/pagination.py"
+  ],
+  "patch_sha256": "b9c86d6ab44362d9e4307e4f3e31dab688d44e5d05c14b502271ba7131ff268c",
+  "visible_passed": true,
+  "protected_passed": true,
+  "input_tokens": 9529,
+  "cached_input_tokens": 0,
+  "output_tokens": 384,
+  "reasoning_tokens": 15,
+  "tool_calls": 0,
+  "patch_attempts": 1,
+  "elapsed_seconds": 10.761,
+  "estimated_cost_usd": 0.00887475,
+  "cost_label": "estimated",
+  "model_id": "gpt-5.4-mini-2026-03-17",
+  "provider": "openai",
+  "controller_commit": "281787403a3b3578f7b7873755139d24f2b782ea",
+  "fixture_sha": "c4dc0b9dc61e26e0a0f0f62ebc97127f227c1b512f2c3dac15e6bab1d4c04e6c",
+  "prompt_sha256": "d63507e4bb5e5be0682ce4f3f6016d930dc5ecc253638b0afbe72a5279c2faca",
+  "manifest_sha256": "913052e0d7b2658bfae6436ec886be1ec0193e4a7d7c334c0b337be61690dbd8",
+  "budgets": {
+    "wall_clock_seconds": 600.0,
+    "max_model_responses": 12,
+    "max_tool_calls": 30,
+    "max_source_patch_submissions": 3,
+    "max_total_tokens": 160000,
+    "max_output_tokens_per_response": 4000,
+    "note": "The cumulative token cap is provisional until the final freeze. Measured D01 usage was about 82-84k input tokens over 8-9 responses, about 10.5k re-sent per turn, roughly 85% of it cached. Cached tokens still count at full weight toward this cap.",
+    "test_timeout_seconds": 30.0
+  },
+  "sampling": {
+    "api": "responses",
+    "reasoning_effort": "low",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": 4000,
+    "store": false
+  },
+  "pricing": {
+    "as_of": "2026-10-09",
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+    "currency": "USD",
+    "input_per_million": 0.75,
+    "cached_input_per_million": 0.075,
+    "output_per_million": 4.5
+  },
+  "reproduction_failed_on_original": null,
+  "reproduction_passed_after_patch": null,
+  "stop_reason": "one_shot",
+  "started_at_utc": "2026-10-09T02:09:00Z",
+  "finished_at_utc": "2026-10-09T02:09:11Z",
+  "issue": "# The first order is missing from the first page\n\nOrder lists are paged, and page 1 is the first page. The earliest order does not show up on page 1.\n\nExample: three orders created in sequence, listed with page 1 and page size 20, should include the first order. Later pages should continue in creation order. A page past the end should be an empty list and should still report the real total. Page numbers below 1, and page sizes outside 1 through 100, should be rejected.\n",
+  "trace": [
+    {
+      "seq": 1,
+      "timestamp_utc": "2026-10-09T02:09:00Z",
+      "category": "prompt",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "Full prompt omitted.",
+      "response_summary": "Full prompt omitted."
+    },
+    {
+      "seq": 2,
+      "timestamp_utc": "2026-10-09T02:09:02Z",
+      "category": "model_response",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "3 items; last={\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed 1-based pagination so page 1 starts at offset 0 instead of skipping the first item. The function still validates page and size and returns the real total count.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pagination.py b/order_service/pagination.py\\\\n--- a/order_service/pagination.py\\\\n+++ b/order_service/pagination.py\\\\n@@ -1,19 +1,19 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"1-based pagination.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Sequence\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n MAX_PAGE_SIZE = 100\\\\n \\\\n \\\\n def paginate(items: Sequence[object], page: object, size: object) -> tuple[list[object], int]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return ``(page_items, total_count)`` using offset ``(page - 1) * size``.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence):\\\\n         raise ValidationError(\\\\\\\"items must be a sequence\\\\\\\")\\\\n     if isinstance(page, bool) or not isinstance(page, int) or page < 1:\\\\n         raise ValidationError(\\\\\\\"page must be an integer >= 1\\\\\\\")\\\\n     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:\\\\n         raise ValidationError(\\\\\\\"size must be an integer from 1 through 100\\\\\\\")\\\\n-    offset = (page - 1) * size + 1\\\\n+    offset = (page - 1) * size\\\\n     return list(items[offset : offset + size]), len(items)\\\\n\\\"}\"}]}",
+      "response_summary": "{\"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed 1-based pagination so page 1 starts at offset 0 instead of skipping the first item. The function still validates page and size and returns the real total count.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pagination.py b/order_service/pagination.py\\\\n--- a/order_service/pagination.py\\\\n+++ b/order_service/pagination.py\\\\n@@ -1,19 +1,19 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"1-based pagination.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Sequence\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n MAX_PAGE_SIZE = 100\\\\n \\\\n \\\\n def paginate(items: Sequence[object], page: object, size: object) -> tuple[list[object], int]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return ``(page_items, total_count)`` using offset ``(page - 1) * size``.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence):\\\\n         raise ValidationError(\\\\\\\"items must be a sequence\\\\\\\")\\\\n     if isinstance(page, bool) or not isinstance(page, int) or page < 1:\\\\n         raise ValidationError(\\\\\\\"page must be an integer >= 1\\\\\\\")\\\\n     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:\\\\n         raise ValidationError(\\\\\\\"size must be an integer from 1 through 100\\\\\\\")\\\\n-    offset = (page - 1) * size + 1\\\\n+    offset = (page - 1) * size\\\\n     return list(items[offset : offset + size]), len(items)\\\\n\\\"}\", \"tool_calls\": [], \"items\": [{\"type\": \"message\", \"role\": \"assistant\", \"content\": [{\"type\": \"output_text\", \"text\": \"{\\\"claim\\\":\\\"repaired\\\",\\\"summary\\\":\\\"Fixed 1-based pagination so page 1 starts at offset 0 instead of skipping the first item. The function still validates page and size and returns the real total count.\\\",\\\"limitations\\\":[],\\\"patch\\\":\\\"diff --git a/order_service/pagination.py b/order_service/pagination.py\\\\n--- a/order_service/pagination.py\\\\n+++ b/order_service/pagination.py\\\\n@@ -1,19 +1,19 @@\\\\n \\\\\\\"\\\\\\\"\\\\\\\"1-based pagination.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n \\\\n from __future__ import annotations\\\\n \\\\n from collections.abc import Sequence\\\\n \\\\n from .errors import ValidationError\\\\n \\\\n MAX_PAGE_SIZE = 100\\\\n \\\\n \\\\n def paginate(items: Sequence[object], page: object, size: object) -> tuple[list[object], int]:\\\\n     \\\\\\\"\\\\\\\"\\\\\\\"Return ``(page_items, total_count)`` using offset ``(page - 1) * size``.\\\\\\\"\\\\\\\"\\\\\\\"\\\\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence):\\\\n         raise ValidationError(\\\\\\\"items must be a sequence\\\\\\\")\\\\n     if isinstance(page, bool) or not isinstance(page, int) or page < 1:\\\\n         raise ValidationError(\\\\\\\"page must be an integer >= 1\\\\\\\")\\\\n     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:\\\\n         raise ValidationError(\\\\\\\"size must be an integer from 1 through 100\\\\\\\")\\\\n-    offset = (page - 1) * size + 1\\\\n+    offset = (page - 1) * size\\\\n     return list(items[offset : offset + size]), len(items)\\\\n\\\"}\"}]}]}"
+    },
+    {
+      "seq": 3,
+      "timestamp_utc": "2026-10-09T02:09:02Z",
+      "category": "patch_policy",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "diff --git a/order_service/pagination.py b/order_service/pagination.py\n--- a/order_service/pagination.py\n+++ b/order_service/pagination.py\n@@ -1,19 +1,19 @@\n \"\"\"1-based pagination.\"\"\"\n \n from __future__ import annotations\n \n from collections.abc import Sequence\n \n from .errors import ValidationError\n \n MAX_PAGE_SIZE = 100\n \n \n def paginate(items: Sequence[object], page: object, size: object) -> tuple[list[object], int]:\n     \"\"\"Return ``(page_items, total_count)`` using offset ``(page - 1) * size``.\"\"\"\n     if isinstance(items, (str, bytes)) or not isinstance(items, Sequence):\n         raise ValidationError(\"items must be a sequence\")\n     if isinstance(page, bool) or not isinstance(page, int) or page < 1:\n         raise ValidationError(\"page must be an integer >= 1\")\n     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:\n         raise ValidationError(\"size must be an integer from 1 through 100\")\n-    offset = (page - 1) * size + 1\n+    offset = (page - 1) * size\n     return list(items[offset : offset + size]), len(items)\n",
+      "response_summary": "{\"ok\": true, \"files\": [\"order_service/pagination.py\"], \"source\": true}"
+    },
+    {
+      "seq": 4,
+      "timestamp_utc": "2026-10-09T02:09:02Z",
+      "category": "model_closed",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "model access closed",
+      "response_summary": "evaluator has not run"
+    },
+    {
+      "seq": 5,
+      "timestamp_utc": "2026-10-09T02:09:11Z",
+      "category": "evaluation",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "final source diff",
+      "response_summary": "verification=passed"
+    },
+    {
+      "seq": 6,
+      "timestamp_utc": "2026-10-09T02:09:11Z",
+      "category": "result",
+      "tool_name": null,
+      "duration_ms": null,
+      "success": true,
+      "request_summary": "result.json",
+      "response_summary": "agent_claim=repaired verification=passed stop=one_shot"
+    }
+  ],
+  "source_diff": "diff --git a/order_service/pagination.py b/order_service/pagination.py\n--- a/order_service/pagination.py\n+++ b/order_service/pagination.py\n@@ -17,5 +17,5 @@\n         raise ValidationError(\"page must be an integer >= 1\")\n     if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_PAGE_SIZE:\n         raise ValidationError(\"size must be an integer from 1 through 100\")\n-    offset = (page - 1) * size + 1\n+    offset = (page - 1) * size\n     return list(items[offset : offset + size]), len(items)\n",
+  "visible_tests": ""
+}

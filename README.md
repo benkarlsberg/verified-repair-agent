@@ -124,11 +124,11 @@ uv run repair-agent publish --runs runs --output public_runs
 uv run repair-agent report --runs runs --output reports/evaluation.md
 ```
 
-`public_runs/` is gitignored. Checked-in sample recordings live in `examples/public_runs/`: one passing iterative attempt and one failing one-shot attempt on example case X00, both from `--model fake`.
+`public_runs/` is gitignored. Checked-in recordings live in `examples/public_runs/` (example case X00, scripted fake model) and `examples/dev_runs/` (D01–D08, one iterative attempt and one one-shot attempt each).
 
 The report reads `runs/` and writes plain markdown tables: verified repairs with the count and denominator, case coverage, false repair claims, ordinary-suite regressions, protected-suite failures, probe abstention, and efficiency. Development results are labeled as development results. The limitations section includes the D04/H02 idempotency overlap. The report does not claim statistical significance.
 
-The viewer reads only the published directory. With no `REPAIR_AGENT_PUBLIC_RUNS` and an empty `public_runs/`, it serves the example recordings. It does not read `runs/`, the private checkout, or a model key.
+The viewer reads only published bundles. With no `REPAIR_AGENT_PUBLIC_RUNS` and an empty `public_runs/`, it serves the checked-in example recordings and development recordings. It does not read `runs/`, the private checkout, or a model key.
 
 ```bash
 uv run uvicorn repair_agent.web:app --host 127.0.0.1 --port 8000
@@ -153,7 +153,8 @@ benchmark/fixture/    correct order service and visible tests
 benchmark/cases/      D01–D08 issue text and bug patches
 benchmark/probes/     P01–P03 issue text
 benchmark/manifests/  dev.json and probes.json
-examples/             public X00 oracle and sample replay bundles
+examples/             public X00 oracle, sample replay bundles, and development recordings
+reports/              checked-in evaluation report; other files here are gitignored
 config/               model id, budgets, pricing, service contract
 docker/               runner image and viewer image
 tests/                policy, runner, loop, publish, report, and viewer checks
